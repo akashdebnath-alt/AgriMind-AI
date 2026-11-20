@@ -1,17 +1,28 @@
-# agrimind_ai
+# AgriMind AI 🌱
 
-A new Flutter project.
+An intelligent agricultural water management system designed to help farmers make smarter irrigation decisions.
 
-## Getting Started
+## Project Vision
 
-This project is a starting point for a Flutter application.
+AgriMind AI combines weather data, crop information, scientific irrigation calculations, and AI-powered agricultural assistance to help farmers optimize water usage.
 
-A few resources to get you started if this is your first Flutter project:
+## Planned Features
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Smart irrigation recommendations
+- Weather monitoring
+- Crop and farm management
+- Water usage analytics
+- AI agricultural assistant
+- Scientific crop water requirement calculations
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Technology Stack
+
+- Flutter – Mobile application
+- FastAPI – Backend API
+- MySQL – Database
+- Machine Learning – Predictive analytics
+- Generative AI – Agricultural assistant
+
+## Project Status
+
+🚧 Under development.
