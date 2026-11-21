@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app import models  # noqa: F401  (register tables)
 from app.core.config import settings
@@ -38,4 +39,21 @@ def home():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "AgriMind AI"}
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        database_status = "connected"
+    except Exception as exc:
+        database_status = "unavailable"
+        return {
+            "status": "unhealthy",
+            "service": "AgriMind AI",
+            "database": database_status,
+            "error": str(exc),
+        }
+
+    return {
+        "status": "healthy",
+        "service": "AgriMind AI",
+        "database": database_status,
+    }

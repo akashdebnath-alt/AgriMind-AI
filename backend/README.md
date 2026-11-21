@@ -12,6 +12,14 @@ uvicorn app.main:app --reload
 ```
 Open http://localhost:8000/docs. Tests: `pytest`.
 
+On Windows, from the project root:
+```powershell
+.\backend\run-server.ps1
+```
+
+The local configuration uses SQLite and creates `agrimind_dev.db` automatically. Docker/MySQL can be enabled later
+with `docker compose up --build` after Docker Desktop is installed.
+
 ## Run with MySQL (Docker)
 ```
 cp .env.example .env && docker compose up --build
