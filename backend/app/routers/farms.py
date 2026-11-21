@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.deps import get_current_user, get_owned_farm, user_farms
-from app.models import Farm, User
-from app.schemas import FarmIn, FarmOut
+from app.dependencies import get_current_user, get_owned_farm, user_farms
+from app.database_models import Farm, User
+from app.api_schemas import FarmIn, FarmOut
 from app.services import weather
-from app.services.units import ACRE_IN_HECTARES, from_hectares, to_hectares
+from app.services.area_units import ACRE_IN_HECTARES, from_hectares, to_hectares
 
 router = APIRouter(prefix="/farms", tags=["farms"])
 

@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.timeutil import now_local
+from app.core.time_utils import now_local
 from app.db.session import get_db
-from app.deps import get_current_user, user_farms
-from app.models import Farm, IrrigationLog, User
-from app.services.units import ACRE_IN_HECTARES
+from app.dependencies import get_current_user, user_farms
+from app.database_models import Farm, IrrigationLog, User
+from app.services.area_units import ACRE_IN_HECTARES
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.security import decode_token
 from app.db.session import get_db
-from app.models import Farm, User
+from app.database_models import Farm, User
 
 bearer = HTTPBearer(auto_error=False)
 

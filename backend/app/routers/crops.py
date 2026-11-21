@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.timeutil import today_local
+from app.core.time_utils import today_local
 from app.db.session import get_db
-from app.deps import get_current_user, user_farms
-from app.models import Crop, Farm, User
-from app.schemas import CropIn, CropOut
-from app.services.units import ACRE_IN_HECTARES, to_hectares
+from app.dependencies import get_current_user, user_farms
+from app.database_models import Crop, Farm, User
+from app.api_schemas import CropIn, CropOut
+from app.services.area_units import ACRE_IN_HECTARES, to_hectares
 
 router = APIRouter(prefix="/crops", tags=["crops"])
 

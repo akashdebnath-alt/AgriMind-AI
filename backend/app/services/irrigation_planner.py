@@ -1,5 +1,5 @@
 from app.core.config import settings
-from app.models import Farm
+from app.database_models import Farm
 from app.services.agronomy import daily_requirement, kc_for
 
 

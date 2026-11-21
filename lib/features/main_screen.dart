@@ -139,6 +139,7 @@ class _MainScreenState extends State<MainScreen> {
       if (!mounted) return;
       setState(() => _farms.add(saved));
       await _loadAllData();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Farm added and saved to backend!'),
@@ -243,7 +244,9 @@ class _MainScreenState extends State<MainScreen> {
 
     if (!widget.isDemoMode && farm.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This farm cannot be deleted without an ID.')),
+        const SnackBar(
+          content: Text('This farm cannot be deleted without an ID.'),
+        ),
       );
       return;
     }
@@ -252,8 +255,9 @@ class _MainScreenState extends State<MainScreen> {
         await ApiService().deleteFarm(farm.id!);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Could not delete farm: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Could not delete farm: $e')));
         }
         return;
       }
@@ -371,10 +375,7 @@ class _MainScreenState extends State<MainScreen> {
             MaterialBanner(
               content: Text('Some data could not be loaded:\n$_loadError'),
               actions: [
-                TextButton(
-                  onPressed: _loadAllData,
-                  child: const Text('Retry'),
-                ),
+                TextButton(onPressed: _loadAllData, child: const Text('Retry')),
               ],
             ),
           if (_isLoading)

@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.deps import get_current_user, user_farms
-from app.models import User
+from app.dependencies import get_current_user, user_farms
+from app.database_models import User
 from app.services import weather as weather_service
 
 router = APIRouter(prefix="/weather", tags=["weather"])

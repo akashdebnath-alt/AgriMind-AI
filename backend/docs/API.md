@@ -4,6 +4,8 @@ Base URL: `http://<host>:8000/api/v1` (Android emulator: `http://10.0.2.2:8000/a
 Interactive docs: `/docs`. All endpoints except `/auth/register`, `/auth/login`, `/auth/forgot-password`
 need `Authorization: Bearer <token>`.
 
+Local setup uses SQLite. Docker setup uses MySQL 8. API startup creates missing SQLAlchemy tables automatically.
+
 | Flutter screen | Endpoints |
 |---|---|
 | LoginScreen | `POST /auth/register`, `POST /auth/login`, `POST /auth/forgot-password`, `GET /auth/me` |

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app import models  # noqa: F401  (register tables)
+from app import database_models  # noqa: F401  (register tables)
 from app.core.config import settings
 from app.db.session import Base, engine
 from app.routers import (adviser, auth, crops, dashboard, farms, insights,

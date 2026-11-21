@@ -5,13 +5,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.timeutil import now_local, today_local
+from app.core.time_utils import now_local, today_local
 from app.db.session import get_db
-from app.deps import get_current_user, user_farms
-from app.models import Farm, IrrigationLog, User
+from app.dependencies import get_current_user, user_farms
+from app.database_models import Farm, IrrigationLog, User
 from app.services import weather
-from app.services.engine import plan_for_farm
-from app.services.units import ACRE_IN_HECTARES
+from app.services.irrigation_planner import plan_for_farm
+from app.services.area_units import ACRE_IN_HECTARES
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]

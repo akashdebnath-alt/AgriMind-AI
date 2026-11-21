@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.timeutil import now_local, today_local
+from app.core.time_utils import now_local, today_local
 from app.db.session import get_db
-from app.deps import get_current_user, get_owned_farm, user_farms
-from app.models import Farm, IrrigationLog, IrrigationPrediction, User
-from app.schemas import IrrigationLogIn, RecommendationIn, ScheduleIn
+from app.dependencies import get_current_user, get_owned_farm, user_farms
+from app.database_models import Farm, IrrigationLog, IrrigationPrediction, User
+from app.api_schemas import IrrigationLogIn, RecommendationIn, ScheduleIn
 from app.services import weather
-from app.services.engine import plan_for_farm
+from app.services.irrigation_planner import plan_for_farm
 
 router = APIRouter(prefix="/irrigation", tags=["irrigation"])
 

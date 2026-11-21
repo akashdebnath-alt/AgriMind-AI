@@ -272,8 +272,9 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                                 const Duration(days: 60),
                               ),
                             );
-                            if (d != null)
+                            if (d != null) {
                               setDialogState(() => selectedDate = d);
+                            }
                           },
                           child: Text(
                             '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
@@ -288,8 +289,9 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                               context: ctx,
                               initialTime: selectedTime,
                             );
-                            if (t != null)
+                            if (t != null) {
                               setDialogState(() => selectedTime = t);
+                            }
                           },
                           child: Text(selectedTime.format(ctx)),
                         ),
@@ -339,8 +341,9 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                       ),
                     ],
                     onChanged: (val) {
-                      if (val != null)
+                      if (val != null) {
                         setDialogState(() => selectedMethod = val);
+                      }
                     },
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),

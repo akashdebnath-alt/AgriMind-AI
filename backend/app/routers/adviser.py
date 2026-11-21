@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.deps import get_current_user, get_owned_farm
-from app.models import User
-from app.schemas import AdviserIn
-from app.services.knowledge import SUGGESTIONS, retrieve
+from app.dependencies import get_current_user, get_owned_farm
+from app.database_models import User
+from app.api_schemas import AdviserIn
+from app.services.adviser_knowledge_base import SUGGESTIONS, retrieve
 
 router = APIRouter(prefix="/adviser", tags=["ai-adviser"])
 

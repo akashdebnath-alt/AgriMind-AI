@@ -5,7 +5,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import Farm
+from app.database_models import Farm
 
 _CACHE: dict[tuple, tuple[float, dict | None]] = {}
 _OK_TTL, _FAIL_TTL = 1800, 120
