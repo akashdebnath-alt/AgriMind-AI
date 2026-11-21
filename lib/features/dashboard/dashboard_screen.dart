@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/app_colors.dart';
 import 'widgets/welcome_card.dart';
-import 'widgets/farm_stats_card.dart';
+import 'widgets/farm_overview_cards.dart';
 import 'widgets/weather_card.dart';
 import 'widgets/quick_actions.dart';
 
@@ -115,34 +115,13 @@ class DashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 14),
 
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    FarmStatsCard(
-                      icon: Icons.agriculture_rounded,
-                      title: 'Total Farms',
-                      value: farmCount.toString(),
-                    ),
-                    FarmStatsCard(
-                      icon: Icons.landscape_rounded,
-                      title: 'Total Land',
-                      value: '${totalArea.toStringAsFixed(1)} acres',
-                      iconBackground: const Color(0xFFEDF1DE),
-                    ),
-                    FarmStatsCard(
-                      icon: Icons.grass_rounded,
-                      title: 'Crop Fields',
-                      value: cropCount.toString(),
-                      iconBackground: const Color(0xFFF2EEDC),
-                    ),
-                    FarmStatsCard(
-                      icon: Icons.water_drop_rounded,
-                      title: 'Irrigation',
-                      value: irrigationStatus,
-                      iconBackground: const Color(0xFFE1F0F2),
-                    ),
-                  ],
+                Center(
+                  child: FarmOverviewCards(
+                    farmCount: farmCount,
+                    totalArea: totalArea,
+                    cropCount: cropCount,
+                    irrigationStatus: irrigationStatus,
+                  ),
                 ),
 
                 const SizedBox(height: 28),
