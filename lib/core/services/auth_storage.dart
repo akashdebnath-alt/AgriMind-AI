@@ -42,14 +42,23 @@ class AuthStorage {
   static String getBaseUrl() {
     final custom = _prefs?.getString(_keyBaseUrl);
     if (custom != null && custom.trim().isNotEmpty) {
-      return custom.trim();
+      return normalizeBaseUrl(custom);
     }
     return ApiConstants.defaultBaseUrl;
   }
 
   static Future<void> saveBaseUrl(String url) async {
     await init();
-    await _prefs?.setString(_keyBaseUrl, url.trim());
+    await _prefs?.setString(_keyBaseUrl, normalizeBaseUrl(url));
+  }
+
+  static String normalizeBaseUrl(String url) {
+    var normalized = url.trim().replaceAll(RegExp(r'/+$'), '');
+    if (normalized.isEmpty) return ApiConstants.defaultBaseUrl;
+    if (!normalized.endsWith('/api/v1')) {
+      normalized = '$normalized/api/v1';
+    }
+    return normalized;
   }
 
   static Future<void> clearAuth() async {
