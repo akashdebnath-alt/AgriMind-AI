@@ -1,0 +1,63 @@
+-- Reference schema for agrimind_db (the API also creates missing tables on startup).
+CREATE DATABASE IF NOT EXISTS agrimind_db;
+USE agrimind_db;
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  full_name VARCHAR(100),
+  language VARCHAR(20) NOT NULL DEFAULT 'English',
+  notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  weather_alerts_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS farms (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  farm_name VARCHAR(100) NOT NULL,
+  location VARCHAR(150) NOT NULL,
+  area_hectares DECIMAL(12,4) NOT NULL,
+  area_unit VARCHAR(10) NOT NULL DEFAULT 'Acres',
+  soil_type VARCHAR(50),
+  latitude DOUBLE, longitude DOUBLE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_farms_user FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS crops (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  farm_id BIGINT UNSIGNED NOT NULL,
+  crop_name VARCHAR(100) NOT NULL,
+  variety VARCHAR(100) NOT NULL DEFAULT 'Not specified',
+  area_hectares DECIMAL(12,4) NOT NULL,
+  planting_date DATE NOT NULL,
+  growth_stage VARCHAR(30) NOT NULL DEFAULT 'Initial',
+  season VARCHAR(20) NOT NULL DEFAULT 'Kharif',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_crops_farm FOREIGN KEY (farm_id) REFERENCES farms(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS irrigation_logs (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  farm_id BIGINT UNSIGNED NOT NULL,
+  amount_liters DOUBLE,
+  method VARCHAR(50) NOT NULL DEFAULT 'Drip irrigation',
+  status VARCHAR(15) NOT NULL DEFAULT 'completed',
+  occurred_at DATETIME, scheduled_for DATETIME,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_logs_farm FOREIGN KEY (farm_id) REFERENCES farms(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS irrigation_predictions (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  farm_id BIGINT UNSIGNED NOT NULL,
+  prediction_date DATE NOT NULL,
+  irrigation_mm DOUBLE NOT NULL,
+  volume_liters DOUBLE NOT NULL,
+  confidence VARCHAR(10) NOT NULL,
+  recommendation TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pred_farm FOREIGN KEY (farm_id) REFERENCES farms(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
