@@ -1,7 +1,9 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import 'core/app_colors.dart';
+import 'core/services/auth_storage.dart';
 import 'features/auth/login_screen.dart';
+import 'features/main_screen.dart';
 
 class AgriMindApp extends StatelessWidget {
   const AgriMindApp({super.key});
@@ -24,7 +26,9 @@ class AgriMindApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const LoginScreen(),
+      home: AuthStorage.isAuthenticated
+          ? const MainScreen()
+          : const LoginScreen(),
     );
   }
 }

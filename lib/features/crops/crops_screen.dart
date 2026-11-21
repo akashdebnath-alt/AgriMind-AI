@@ -1,5 +1,4 @@
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/app_colors.dart';
 import 'crop_model.dart';
@@ -9,12 +8,20 @@ class CropsScreen extends StatefulWidget {
   final List<String> farmNames;
   final List<Crop> crops;
   final ValueChanged<List<Crop>> onCropsChanged;
+  final Future<Crop?> Function(Crop crop)? onAddCropRequest;
+  final Future<Crop?> Function(Crop crop)? onEditCropRequest;
+  final Future<bool> Function(Crop crop)? onDeleteCropRequest;
+  final Future<void> Function()? onRefresh;
 
   const CropsScreen({
     super.key,
     required this.farmNames,
     required this.crops,
     required this.onCropsChanged,
+    this.onAddCropRequest,
+    this.onEditCropRequest,
+    this.onDeleteCropRequest,
+    this.onRefresh,
   });
 
   @override
@@ -32,9 +39,7 @@ class _CropsScreenState extends State<CropsScreen> {
     if (widget.farmNames.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Please register a farm before adding a crop.',
-          ),
+          content: Text('Please register a farm before adding a crop.'),
         ),
       );
       return;
@@ -43,20 +48,22 @@ class _CropsScreenState extends State<CropsScreen> {
     final crop = await Navigator.push<Crop>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddCropScreen(
-          farmNames: widget.farmNames,
-        ),
+        builder: (_) => AddCropScreen(farmNames: widget.farmNames),
       ),
     );
 
     if (crop != null && mounted) {
-      _updateCrops([..._crops, crop]);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Crop added successfully!'),
-        ),
-      );
+      if (widget.onAddCropRequest != null) {
+        final saved = await widget.onAddCropRequest!(crop);
+        if (saved != null) {
+          _updateCrops([..._crops, saved]);
+        }
+      } else {
+        _updateCrops([..._crops, crop]);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Crop added successfully!')),
+        );
+      }
     }
   }
 
@@ -72,16 +79,21 @@ class _CropsScreenState extends State<CropsScreen> {
     );
 
     if (updated != null && mounted) {
-      final updatedCrops = List<Crop>.from(_crops);
-      updatedCrops[index] = updated;
-
-      _updateCrops(updatedCrops);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Crop updated successfully!'),
-        ),
-      );
+      if (widget.onEditCropRequest != null) {
+        final saved = await widget.onEditCropRequest!(updated);
+        if (saved != null) {
+          final updatedCrops = List<Crop>.from(_crops);
+          updatedCrops[index] = saved;
+          _updateCrops(updatedCrops);
+        }
+      } else {
+        final updatedCrops = List<Crop>.from(_crops);
+        updatedCrops[index] = updated;
+        _updateCrops(updatedCrops);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Crop updated successfully!')),
+        );
+      }
     }
   }
 
@@ -92,9 +104,7 @@ class _CropsScreenState extends State<CropsScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Crop?'),
-        content: Text(
-          'Are you sure you want to delete ${crop.name}?',
-        ),
+        content: Text('Are you sure you want to delete ${crop.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -102,26 +112,28 @@ class _CropsScreenState extends State<CropsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (confirmed == true && mounted) {
-      final updatedCrops = List<Crop>.from(_crops);
-      updatedCrops.removeAt(index);
-
-      _updateCrops(updatedCrops);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Crop deleted successfully.'),
-        ),
-      );
+      if (widget.onDeleteCropRequest != null) {
+        final deleted = await widget.onDeleteCropRequest!(crop);
+        if (deleted) {
+          final updatedCrops = List<Crop>.from(_crops);
+          updatedCrops.removeAt(index);
+          _updateCrops(updatedCrops);
+        }
+      } else {
+        final updatedCrops = List<Crop>.from(_crops);
+        updatedCrops.removeAt(index);
+        _updateCrops(updatedCrops);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Crop deleted successfully.')),
+        );
+      }
     }
   }
 
@@ -131,9 +143,7 @@ class _CropsScreenState extends State<CropsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return Padding(
@@ -164,17 +174,11 @@ class _CropsScreenState extends State<CropsScreen> {
               Text('Farm: ${crop.farmName}'),
               const SizedBox(height: 16),
               _detail('Variety', crop.variety),
-              _detail('Area', '${crop.area} acres'),
-              _detail(
-                'Planting Date',
-                _formatDate(crop.plantingDate),
-              ),
+              _detail('Area', '${crop.area} ${crop.areaUnit}'),
+              _detail('Planting Date', _formatDate(crop.plantingDate)),
               _detail('Growth Stage', crop.growthStage),
               _detail('Season', crop.season),
-              _detail(
-                'Days Since Planting',
-                '${crop.daysSincePlanting} days',
-              ),
+              _detail('Days Since Planting', '${crop.daysSincePlanting} days'),
               const SizedBox(height: 20),
             ],
           ),
@@ -189,17 +193,12 @@ class _CropsScreenState extends State<CropsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
+          Text(title, style: TextStyle(color: Colors.grey.shade600)),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -213,6 +212,25 @@ class _CropsScreenState extends State<CropsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget listContent = _crops.isEmpty
+        ? _emptyState()
+        : ListView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            itemCount: _crops.length,
+            itemBuilder: (context, index) {
+              final crop = _crops[index];
+              return _cropCard(crop, index);
+            },
+          );
+
+    if (widget.onRefresh != null) {
+      listContent = RefreshIndicator(
+        onRefresh: widget.onRefresh!,
+        color: AppColors.green,
+        child: listContent,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -236,9 +254,7 @@ class _CropsScreenState extends State<CropsScreen> {
                           ),
                         ),
                         SizedBox(height: 5),
-                        Text(
-                          'Manage your crops and growing seasons',
-                        ),
+                        Text('Manage your crops and growing seasons'),
                       ],
                     ),
                   ),
@@ -263,11 +279,7 @@ class _CropsScreenState extends State<CropsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.grass,
-                      color: Colors.white,
-                      size: 35,
-                    ),
+                    const Icon(Icons.grass, color: Colors.white, size: 35),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,20 +305,7 @@ class _CropsScreenState extends State<CropsScreen> {
 
             const SizedBox(height: 20),
 
-            Expanded(
-              child: _crops.isEmpty
-                  ? _emptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(
-                        20, 0, 20, 20,
-                      ),
-                      itemCount: _crops.length,
-                      itemBuilder: (context, index) {
-                        final crop = _crops[index];
-                        return _cropCard(crop, index);
-                      },
-                    ),
-            ),
+            Expanded(child: listContent),
           ],
         ),
       ),
@@ -327,11 +326,7 @@ class _CropsScreenState extends State<CropsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.grass,
-              size: 80,
-              color: Colors.green.shade200,
-            ),
+            Icon(Icons.grass, size: 80, color: Colors.green.shade200),
             const SizedBox(height: 16),
             const Text(
               'No Crops Registered',
@@ -363,9 +358,7 @@ class _CropsScreenState extends State<CropsScreen> {
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 14),
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -398,9 +391,7 @@ class _CropsScreenState extends State<CropsScreen> {
                       ),
                       Text(
                         crop.variety,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                        ),
+                        style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ],
                   ),
@@ -414,14 +405,8 @@ class _CropsScreenState extends State<CropsScreen> {
                     }
                   },
                   itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit'),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete'),
-                    ),
+                    PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
               ],
@@ -443,7 +428,7 @@ class _CropsScreenState extends State<CropsScreen> {
                   child: _cardInfo(
                     Icons.square_foot,
                     'Area',
-                    '${crop.area} acres',
+                    '${crop.area} ${crop.areaUnit}',
                   ),
                 ),
               ],
@@ -485,19 +470,11 @@ class _CropsScreenState extends State<CropsScreen> {
     );
   }
 
-  Widget _cardInfo(
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _cardInfo(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 17,
-          color: AppColors.green,
-        ),
+        Icon(icon, size: 17, color: AppColors.green),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
@@ -505,10 +482,7 @@ class _CropsScreenState extends State<CropsScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               ),
               Text(
                 value,

@@ -1,5 +1,4 @@
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/app_colors.dart';
 import 'widgets/welcome_card.dart';
@@ -10,33 +9,52 @@ import 'widgets/quick_actions.dart';
 class DashboardScreen extends StatelessWidget {
   final int farmCount;
   final double totalArea;
+  final int cropCount;
+  final String irrigationStatus;
+  final Map<String, dynamic>? weatherSnippet;
   final VoidCallback onAddFarm;
   final VoidCallback onOpenFarms;
   final VoidCallback onOpenWater;
   final VoidCallback onOpenCrops;
   final VoidCallback onOpenAI;
+  final VoidCallback? onOpenWeather;
+  final Future<void> Function()? onRefresh;
 
   const DashboardScreen({
     super.key,
     required this.farmCount,
     required this.totalArea,
+    this.cropCount = 0,
+    this.irrigationStatus = 'Pending',
+    this.weatherSnippet,
     required this.onAddFarm,
     required this.onOpenFarms,
     required this.onOpenWater,
     required this.onOpenCrops,
     required this.onOpenAI,
+    this.onOpenWeather,
+    this.onRefresh,
   });
 
   void showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    final cur = weatherSnippet?['current'] as Map<String, dynamic>?;
+    final tempStr = cur != null ? '${cur['temperature_c']?.round()}°C' : null;
+    final humStr = cur != null ? '${cur['humidity_pct']}%' : null;
+    final windStr = cur != null ? '${cur['wind_kmh']} km/h' : null;
+    final condStr = cur != null ? cur['condition']?.toString() : null;
+    final locStr = weatherSnippet?['farm_name'] != null
+        ? '${weatherSnippet!['farm_name']} • ${weatherSnippet!['location'] ?? ''}'
+        : weatherSnippet?['location']?.toString();
+
+    Widget content = SafeArea(
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
@@ -62,10 +80,7 @@ class DashboardScreen extends StatelessWidget {
                           SizedBox(height: 5),
                           Text(
                             'Your smart farming companion',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         ],
                       ),
@@ -115,17 +130,17 @@ class DashboardScreen extends StatelessWidget {
                       value: '${totalArea.toStringAsFixed(1)} acres',
                       iconBackground: const Color(0xFFEDF1DE),
                     ),
-                    const FarmStatsCard(
+                    FarmStatsCard(
                       icon: Icons.grass_rounded,
                       title: 'Crop Fields',
-                      value: '0',
-                      iconBackground: Color(0xFFF2EEDC),
+                      value: cropCount.toString(),
+                      iconBackground: const Color(0xFFF2EEDC),
                     ),
-                    const FarmStatsCard(
+                    FarmStatsCard(
                       icon: Icons.water_drop_rounded,
                       title: 'Irrigation',
-                      value: 'Pending',
-                      iconBackground: Color(0xFFE1F0F2),
+                      value: irrigationStatus,
+                      iconBackground: const Color(0xFFE1F0F2),
                     ),
                   ],
                 ),
@@ -133,14 +148,23 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 28),
 
                 // WEATHER
-                const _SectionHeader(
+                _SectionHeader(
                   title: 'Weather',
                   subtitle: 'Weather conditions for your farm',
+                  actionText: 'Details',
+                  onAction: onOpenWeather,
                 ),
 
                 const SizedBox(height: 14),
 
-                const WeatherCard(),
+                WeatherCard(
+                  temperature: tempStr,
+                  humidity: humStr,
+                  wind: windStr,
+                  condition: condStr,
+                  location: locStr,
+                  onTap: onOpenWeather,
+                ),
 
                 const SizedBox(height: 28),
 
@@ -161,9 +185,7 @@ class DashboardScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: const Color(0xFFE4ECE4),
-                      ),
+                      border: Border.all(color: const Color(0xFFE4ECE4)),
                     ),
                     child: const Row(
                       children: [
@@ -288,10 +310,7 @@ class DashboardScreen extends StatelessWidget {
                 Center(
                   child: Text(
                     'AgriMind AI • Smart Agriculture',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                 ),
 
@@ -302,6 +321,16 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
     );
+
+    if (onRefresh != null) {
+      return RefreshIndicator(
+        onRefresh: onRefresh!,
+        color: AppColors.green,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
 
@@ -339,19 +368,13 @@ class _SectionHeader extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ],
           ),
         ),
         if (actionText != null)
-          TextButton(
-            onPressed: onAction,
-            child: Text(actionText!),
-          ),
+          TextButton(onPressed: onAction, child: Text(actionText!)),
       ],
     );
   }

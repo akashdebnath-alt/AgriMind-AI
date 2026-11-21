@@ -1,5 +1,5 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import '../../../core/app_colors.dart';
 
 class FarmStatsCard extends StatelessWidget {
@@ -40,10 +40,7 @@ class FarmStatsCard extends StatelessWidget {
           const SizedBox(height: 15),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 6),
           Text(

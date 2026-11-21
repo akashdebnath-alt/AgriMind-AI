@@ -1,5 +1,5 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import 'farm_model.dart';
 
@@ -7,16 +7,38 @@ class FarmsScreen extends StatelessWidget {
   final List<Farm> farms;
   final VoidCallback onAddFarm;
   final ValueChanged<int> onFarmTap;
+  final Future<void> Function()? onRefresh;
 
   const FarmsScreen({
     super.key,
     required this.farms,
     required this.onAddFarm,
     required this.onFarmTap,
+    this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget listContent = farms.isEmpty
+        ? _EmptyFarms(onAddFarm: onAddFarm)
+        : ListView.builder(
+            itemCount: farms.length,
+            padding: const EdgeInsets.only(bottom: 20),
+            itemBuilder: (context, index) {
+              final farm = farms[index];
+
+              return _FarmCard(farm: farm, onTap: () => onFarmTap(index));
+            },
+          );
+
+    if (onRefresh != null) {
+      listContent = RefreshIndicator(
+        onRefresh: onRefresh!,
+        color: AppColors.green,
+        child: listContent,
+      );
+    }
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -41,10 +63,7 @@ class FarmsScreen extends StatelessWidget {
                       SizedBox(height: 6),
                       Text(
                         'Manage your agricultural lands',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.black54, fontSize: 13),
                       ),
                     ],
                   ),
@@ -56,10 +75,7 @@ class FarmsScreen extends StatelessWidget {
                   ),
                   child: IconButton(
                     onPressed: onAddFarm,
-                    icon: const Icon(
-                      Icons.add_rounded,
-                      color: AppColors.green,
-                    ),
+                    icon: const Icon(Icons.add_rounded, color: AppColors.green),
                     tooltip: 'Add farm',
                   ),
                 ),
@@ -74,10 +90,7 @@ class FarmsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    AppColors.green,
-                    AppColors.darkGreen,
-                  ],
+                  colors: [AppColors.green, AppColors.darkGreen],
                 ),
                 borderRadius: BorderRadius.circular(22),
               ),
@@ -95,10 +108,7 @@ class FarmsScreen extends StatelessWidget {
                       children: [
                         const Text(
                           'Registered Farms',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                         const SizedBox(height: 5),
                         Text(
@@ -137,32 +147,14 @@ class FarmsScreen extends StatelessWidget {
                 ),
                 Text(
                   '${farms.length} total',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
               ],
             ),
 
             const SizedBox(height: 14),
 
-            Expanded(
-              child: farms.isEmpty
-                  ? _EmptyFarms(onAddFarm: onAddFarm)
-                  : ListView.builder(
-                      itemCount: farms.length,
-                      padding: const EdgeInsets.only(bottom: 20),
-                      itemBuilder: (context, index) {
-                        final farm = farms[index];
-
-                        return _FarmCard(
-                          farm: farm,
-                          onTap: () => onFarmTap(index),
-                        );
-                      },
-                    ),
-            ),
+            Expanded(child: listContent),
           ],
         ),
       ),
@@ -191,7 +183,7 @@ class _EmptyFarms extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.lightGreen,
                   shape: BoxShape.circle,
                 ),
@@ -215,10 +207,7 @@ class _EmptyFarms extends StatelessWidget {
                 'Add your farmland to start managing crops, '
                 'weather and irrigation.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.black54,
-                  height: 1.5,
-                ),
+                style: TextStyle(color: Colors.black54, height: 1.5),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -246,10 +235,7 @@ class _FarmCard extends StatelessWidget {
   final Farm farm;
   final VoidCallback onTap;
 
-  const _FarmCard({
-    required this.farm,
-    required this.onTap,
-  });
+  const _FarmCard({required this.farm, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -336,10 +322,12 @@ class _FarmCard extends StatelessWidget {
                     icon: Icons.landscape_outlined,
                     text: '${farm.area} ${farm.areaUnit}',
                   ),
-                  _FarmTag(
-                    icon: Icons.terrain_rounded,
-                    text: farm.soilType,
-                  ),
+                  _FarmTag(icon: Icons.terrain_rounded, text: farm.soilType),
+                  if (farm.cropCount > 0)
+                    _FarmTag(
+                      icon: Icons.eco_rounded,
+                      text: '${farm.cropCount} crops',
+                    ),
                 ],
               ),
             ],
@@ -354,18 +342,12 @@ class _FarmTag extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _FarmTag({
-    required this.icon,
-    required this.text,
-  });
+  const _FarmTag({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F7F2),
         borderRadius: BorderRadius.circular(12),

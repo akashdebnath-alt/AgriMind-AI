@@ -1,65 +1,246 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
+import '../../core/services/api_service.dart';
 
-class InsightsScreen extends StatelessWidget {
+class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
+
+  @override
+  State<InsightsScreen> createState() => _InsightsScreenState();
+}
+
+class _InsightsScreenState extends State<InsightsScreen> {
+  bool _isLoading = true;
+
+  // Overview
+  String _totalFarms = '2';
+  String _cultivatedArea = '5.5 ac';
+  String _activeCrops = '4';
+  String _waterUsed = '4,500 L';
+
+  // Water usage
+  String _waterUsageTitle = '4,500 L';
+  double _usedRatio = 0.65;
+  String _usedPctLabel = '65%';
+  double _remainingRatio = 0.35;
+  String _remainingPctLabel = '35%';
+
+  // Crop distribution
+  List<Map<String, dynamic>> _cropDistribution = [
+    {'name': 'Rice', 'area': '2.5 acres', 'progress': 0.80},
+    {'name': 'Tomato', 'area': '1.5 acres', 'progress': 0.55},
+    {'name': 'Mustard', 'area': '1.0 acres', 'progress': 0.35},
+    {'name': 'Potato', 'area': '0.5 acres', 'progress': 0.70},
+  ];
+
+  // Weekly activity
+  List<Map<String, dynamic>> _weeklyDays = [
+    {'day': 'Mon', 'value': 0.60},
+    {'day': 'Tue', 'value': 0.90},
+    {'day': 'Wed', 'value': 0.40},
+    {'day': 'Thu', 'value': 0.75},
+    {'day': 'Fri', 'value': 0.50},
+    {'day': 'Sat', 'value': 1.00},
+    {'day': 'Sun', 'value': 0.30},
+  ];
+
+  // Recommendations
+  List<Map<String, dynamic>> _recommendations = [
+    {
+      'icon': Icons.water_drop_outlined,
+      'title': 'Monitor soil moisture',
+      'description': 'Check soil moisture before your next irrigation session.',
+    },
+    {
+      'icon': Icons.cloud_outlined,
+      'title': 'Check weather conditions',
+      'description': 'Review rainfall forecasts before planning irrigation.',
+    },
+    {
+      'icon': Icons.eco_outlined,
+      'title': 'Track crop growth',
+      'description': 'Keep crop planting dates and growth stages updated.',
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsights();
+  }
+
+  Future<void> _loadInsights() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final data = await ApiService().getInsights();
+      if (data.isNotEmpty && mounted) {
+        setState(() {
+          // Overview
+          final ov = data['overview'] as Map<String, dynamic>?;
+          if (ov != null) {
+            _totalFarms = '${ov['total_farms'] ?? 0}';
+            _cultivatedArea = '${ov['cultivated_area_acres'] ?? 0.0} ac';
+            _activeCrops = '${ov['active_crops'] ?? 0}';
+            final usedL = ov['water_used_liters'] ?? 0;
+            _waterUsed = '$usedL L';
+          }
+
+          // Water usage
+          final wu = data['water_usage'] as Map<String, dynamic>?;
+          if (wu != null) {
+            final usedLiters = wu['used_liters'] ?? 0;
+            _waterUsageTitle = '$usedLiters L';
+            if (wu['used_ratio'] != null) {
+              _usedRatio = (wu['used_ratio'] as num).toDouble().clamp(0.0, 1.0);
+              _usedPctLabel = '${(_usedRatio * 100).round()}%';
+            }
+            if (wu['remaining_ratio'] != null) {
+              _remainingRatio = (wu['remaining_ratio'] as num).toDouble().clamp(
+                0.0,
+                1.0,
+              );
+              _remainingPctLabel = '${(_remainingRatio * 100).round()}%';
+            }
+          }
+
+          // Crop distribution
+          if (data['crop_distribution'] is List &&
+              (data['crop_distribution'] as List).isNotEmpty) {
+            _cropDistribution = (data['crop_distribution'] as List).map((c) {
+              final m = c as Map<String, dynamic>;
+              final share = (m['share'] as num?)?.toDouble() ?? 0.5;
+              return {
+                'name': m['name'] ?? 'Crop',
+                'area': '${m['area_acres'] ?? 0} acres',
+                'progress': share.clamp(0.05, 1.0),
+              };
+            }).toList();
+          }
+
+          // Weekly activity
+          if (data['weekly_activity'] is List &&
+              (data['weekly_activity'] as List).isNotEmpty) {
+            _weeklyDays = (data['weekly_activity'] as List).map((d) {
+              final m = d as Map<String, dynamic>;
+              final val = (m['value'] as num?)?.toDouble() ?? 0.1;
+              return {'day': m['day'] ?? 'Day', 'value': val.clamp(0.05, 1.0)};
+            }).toList();
+          }
+
+          // Recommendations
+          if (data['recommendations'] is List &&
+              (data['recommendations'] as List).isNotEmpty) {
+            _recommendations = (data['recommendations'] as List).map((r) {
+              final m = r as Map<String, dynamic>;
+              IconData icon = Icons.info_outline;
+              final iconStr = m['icon']?.toString() ?? '';
+              if (iconStr == 'water') icon = Icons.water_drop_outlined;
+              if (iconStr == 'weather') icon = Icons.cloud_outlined;
+              if (iconStr == 'crop') icon = Icons.eco_outlined;
+              if (iconStr == 'farm') icon = Icons.landscape_outlined;
+
+              return {
+                'icon': icon,
+                'title': m['title'] ?? 'Recommendation',
+                'description': m['description'] ?? '',
+              };
+            }).toList();
+          }
+        });
+      }
+    } catch (_) {
+      // Keep sample data if offline
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              const Text(
-                'Insights & Analytics',
-                style: TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGreen,
+        child: RefreshIndicator(
+          onRefresh: _loadInsights,
+          color: AppColors.green,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Insights & Analytics',
+                            style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkGreen,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Understand your farm performance.',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isLoading)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.green,
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Understand your farm performance.',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 14,
-                ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Overview cards
-              _buildOverview(),
+                // Overview cards
+                _buildOverview(),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Water usage
-              _buildWaterUsage(),
+                // Water usage
+                _buildWaterUsage(),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Crop distribution
-              _buildCropDistribution(),
+                // Crop distribution
+                _buildCropDistribution(),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Weekly activity
-              _buildWeeklyActivity(),
+                // Weekly activity
+                _buildWeeklyActivity(),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Recommendations
-              _buildRecommendations(),
+                // Recommendations
+                _buildRecommendations(),
 
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -89,7 +270,7 @@ class InsightsScreen extends StatelessWidget {
             Expanded(
               child: _statCard(
                 title: 'Total Farms',
-                value: '2',
+                value: _totalFarms,
                 icon: Icons.landscape,
                 color: AppColors.green,
               ),
@@ -98,7 +279,7 @@ class InsightsScreen extends StatelessWidget {
             Expanded(
               child: _statCard(
                 title: 'Cultivated Area',
-                value: '5.5 ac',
+                value: _cultivatedArea,
                 icon: Icons.grass,
                 color: Colors.orange,
               ),
@@ -113,7 +294,7 @@ class InsightsScreen extends StatelessWidget {
             Expanded(
               child: _statCard(
                 title: 'Active Crops',
-                value: '4',
+                value: _activeCrops,
                 icon: Icons.eco,
                 color: Colors.teal,
               ),
@@ -122,7 +303,7 @@ class InsightsScreen extends StatelessWidget {
             Expanded(
               child: _statCard(
                 title: 'Water Used',
-                value: '4,500 L',
+                value: _waterUsed,
                 icon: Icons.water_drop,
                 color: Colors.blue,
               ),
@@ -165,10 +346,7 @@ class InsightsScreen extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -205,17 +383,14 @@ class InsightsScreen extends StatelessWidget {
 
           Text(
             'Weekly irrigation water consumption',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
 
           const SizedBox(height: 20),
 
-          const Text(
-            '4,500 L',
-            style: TextStyle(
+          Text(
+            _waterUsageTitle,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: AppColors.darkGreen,
@@ -225,18 +400,15 @@ class InsightsScreen extends StatelessWidget {
           const SizedBox(height: 5),
 
           Text(
-            'Illustrative weekly usage',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-            ),
+            'Completed irrigation logs vs. weekly requirement',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
           ),
 
           const SizedBox(height: 20),
 
-          _progressRow('Water used', 0.65, '65%'),
+          _progressRow('Water used', _usedRatio, _usedPctLabel),
           const SizedBox(height: 15),
-          _progressRow('Water remaining', 0.35, '35%'),
+          _progressRow('Water remaining', _remainingRatio, _remainingPctLabel),
         ],
       ),
     );
@@ -272,9 +444,7 @@ class InsightsScreen extends StatelessWidget {
             value: value,
             minHeight: 9,
             backgroundColor: AppColors.lightGreen,
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              AppColors.green,
-            ),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
           ),
         ),
       ],
@@ -286,13 +456,6 @@ class InsightsScreen extends StatelessWidget {
   // --------------------------------------------------
 
   Widget _buildCropDistribution() {
-    final crops = [
-      {'name': 'Rice', 'area': '2.5 acres', 'progress': 0.80},
-      {'name': 'Tomato', 'area': '1.5 acres', 'progress': 0.55},
-      {'name': 'Mustard', 'area': '1.0 acres', 'progress': 0.35},
-      {'name': 'Potato', 'area': '0.5 acres', 'progress': 0.70},
-    ];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _cardDecoration(),
@@ -312,55 +475,61 @@ class InsightsScreen extends StatelessWidget {
 
           Text(
             'Cultivated area by crop',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
 
           const SizedBox(height: 20),
 
-          ...crops.map((crop) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        crop['name'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.darkGreen,
+          if (_cropDistribution.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No crops registered yet.',
+                style: TextStyle(color: Colors.black54),
+              ),
+            )
+          else
+            ..._cropDistribution.map((crop) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          crop['name'] as String,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.darkGreen,
+                          ),
                         ),
-                      ),
-                      Text(
-                        crop['area'] as String,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
+                        Text(
+                          crop['area'] as String,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: LinearProgressIndicator(
-                      value: crop['progress'] as double,
-                      minHeight: 8,
-                      backgroundColor: AppColors.lightGreen,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.green,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: LinearProgressIndicator(
+                        value: (crop['progress'] as num).toDouble(),
+                        minHeight: 8,
+                        backgroundColor: AppColors.lightGreen,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.green,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -371,16 +540,6 @@ class InsightsScreen extends StatelessWidget {
   // --------------------------------------------------
 
   Widget _buildWeeklyActivity() {
-    final days = [
-      {'day': 'Mon', 'value': 0.60},
-      {'day': 'Tue', 'value': 0.90},
-      {'day': 'Wed', 'value': 0.40},
-      {'day': 'Thu', 'value': 0.75},
-      {'day': 'Fri', 'value': 0.50},
-      {'day': 'Sat', 'value': 1.00},
-      {'day': 'Sun', 'value': 0.30},
-    ];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _cardDecoration(),
@@ -399,11 +558,8 @@ class InsightsScreen extends StatelessWidget {
           const SizedBox(height: 6),
 
           Text(
-            'Illustrative irrigation activity',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+            'Irrigation activity from completed logs this week',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
 
           const SizedBox(height: 22),
@@ -413,15 +569,15 @@ class InsightsScreen extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: days.map((item) {
-                final value = item['value'] as double;
+              children: _weeklyDays.map((item) {
+                final value = (item['value'] as num).toDouble();
 
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
                       width: 24,
-                      height: 110 * value,
+                      height: (110 * value).clamp(6.0, 110.0),
                       decoration: BoxDecoration(
                         color: AppColors.green,
                         borderRadius: BorderRadius.circular(8),
@@ -450,27 +606,6 @@ class InsightsScreen extends StatelessWidget {
   // --------------------------------------------------
 
   Widget _buildRecommendations() {
-    final recommendations = [
-      {
-        'icon': Icons.water_drop_outlined,
-        'title': 'Monitor soil moisture',
-        'description':
-            'Check soil moisture before your next irrigation session.',
-      },
-    {
-        'icon': Icons.cloud_outlined,
-        'title': 'Check weather conditions',
-        'description':
-            'Review rainfall forecasts before planning irrigation.',
-      },
-    {
-        'icon': Icons.eco_outlined,
-        'title': 'Track crop growth',
-        'description':
-            'Keep crop planting dates and growth stages updated.',
-      },
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -485,7 +620,7 @@ class InsightsScreen extends StatelessWidget {
 
         const SizedBox(height: 14),
 
-        ...recommendations.map((item) {
+        ..._recommendations.map((item) {
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
@@ -533,10 +668,6 @@ class InsightsScreen extends StatelessWidget {
       ],
     );
   }
-
-  // --------------------------------------------------
-  // COMMON CARD STYLE
-  // --------------------------------------------------
 
   BoxDecoration _cardDecoration() {
     return BoxDecoration(

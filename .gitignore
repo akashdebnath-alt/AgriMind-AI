@@ -12,6 +12,11 @@
 .swiftpm/
 migrate_working_dir/
 
+# AgriMind backend local state
+backend/.env
+backend/agrimind_dev.db
+backend/.pytest_cache/
+
 # IntelliJ related
 *.iml
 *.ipr

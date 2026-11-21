@@ -1,14 +1,11 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import '../../../core/app_colors.dart';
 
 class WelcomeCard extends StatelessWidget {
   final VoidCallback onAddFarm;
 
-  const WelcomeCard({
-    super.key,
-    required this.onAddFarm,
-  });
+  const WelcomeCard({super.key, required this.onAddFarm});
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +16,7 @@ class WelcomeCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2E8658),
-            AppColors.darkGreen,
-          ],
+          colors: [Color(0xFF2E8658), AppColors.darkGreen],
         ),
         borderRadius: BorderRadius.circular(26),
       ),
@@ -40,10 +34,7 @@ class WelcomeCard extends StatelessWidget {
           const SizedBox(height: 10),
           const Text(
             'Grow smarter. Save water. Harvest better.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 22),
           SizedBox(

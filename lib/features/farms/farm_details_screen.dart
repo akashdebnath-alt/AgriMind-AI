@@ -1,5 +1,6 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
+import '../../core/app_colors.dart';
 import 'farm_model.dart';
 
 class FarmDetailsScreen extends StatelessWidget {
@@ -16,8 +17,8 @@ class FarmDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFF246B45);
-    const darkGreen = Color(0xFF17452D);
+    const green = AppColors.green;
+    const darkGreen = AppColors.darkGreen;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F2),
@@ -114,6 +115,21 @@ class FarmDetailsScreen extends StatelessWidget {
             title: 'Location',
             value: farm.location,
           ),
+
+          if (farm.cropCount > 0)
+            _DetailCard(
+              icon: Icons.eco_rounded,
+              title: 'Registered crops',
+              value: '${farm.cropCount} crops',
+            ),
+
+          if (farm.latitude != null && farm.longitude != null)
+            _DetailCard(
+              icon: Icons.my_location_rounded,
+              title: 'GPS Coordinates',
+              value:
+                  '${farm.latitude!.toStringAsFixed(4)}, ${farm.longitude!.toStringAsFixed(4)}',
+            ),
 
           const SizedBox(height: 24),
 

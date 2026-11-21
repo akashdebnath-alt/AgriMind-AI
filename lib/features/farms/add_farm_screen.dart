@@ -1,14 +1,11 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import 'farm_model.dart';
 
 class AddFarmScreen extends StatefulWidget {
   final Farm? existingFarm;
 
-  const AddFarmScreen({
-    super.key,
-    this.existingFarm,
-  });
+  const AddFarmScreen({super.key, this.existingFarm});
 
   @override
   State<AddFarmScreen> createState() => _AddFarmScreenState();
@@ -64,11 +61,17 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final farm = Farm(
+      id: widget.existingFarm?.id,
       name: _nameController.text.trim(),
       location: _locationController.text.trim(),
       area: double.parse(_areaController.text.trim()),
       areaUnit: _areaUnit,
       soilType: _soilType,
+      cropCount: widget.existingFarm?.cropCount ?? 0,
+      areaHectares: widget.existingFarm?.areaHectares,
+      areaAcres: widget.existingFarm?.areaAcres,
+      latitude: widget.existingFarm?.latitude,
+      longitude: widget.existingFarm?.longitude,
     );
 
     Navigator.pop(context, farm);
@@ -211,10 +214,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
               initialValue: _soilType,
               decoration: _inputDecoration('', Icons.terrain_rounded),
               items: _soilTypes.map((soil) {
-                return DropdownMenuItem(
-                  value: soil,
-                  child: Text(soil),
-                );
+                return DropdownMenuItem(value: soil, child: Text(soil));
               }).toList(),
               onChanged: (value) {
                 if (value != null) {
@@ -281,10 +281,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Color(0xFF246B45),
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: Color(0xFF246B45), width: 1.5),
       ),
     );
   }

@@ -1,5 +1,5 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import '../../../core/app_colors.dart';
 
 class QuickActions extends StatelessWidget {
@@ -100,10 +100,7 @@ class _ActionCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               ),
             ],
           ),

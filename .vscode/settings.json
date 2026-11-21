@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/Users/AKASH DEBNATH/agrimind_ai/linux"
+    "cmake.sourceDirectory": "C:/Users/AKASH DEBNATH/agrimind_ai/linux",
+    "python.terminal.useEnvFile": true
 }

@@ -1,5 +1,5 @@
+import 'package:material_ui/material_ui.dart';
 
-import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import 'crop_model.dart';
 
@@ -7,11 +7,7 @@ class AddCropScreen extends StatefulWidget {
   final List<String> farmNames;
   final Crop? existingCrop;
 
-  const AddCropScreen({
-    super.key,
-    required this.farmNames,
-    this.existingCrop,
-  });
+  const AddCropScreen({super.key, required this.farmNames, this.existingCrop});
 
   @override
   State<AddCropScreen> createState() => _AddCropScreenState();
@@ -35,12 +31,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
     'Harvest',
   ];
 
-  final List<String> _seasons = [
-    'Kharif',
-    'Rabi',
-    'Zaid',
-    'Other',
-  ];
+  final List<String> _seasons = ['Kharif', 'Rabi', 'Zaid', 'Other'];
 
   bool get _isEditing => widget.existingCrop != null;
 
@@ -57,13 +48,16 @@ class _AddCropScreenState extends State<AddCropScreen> {
       _plantingDate = crop.plantingDate;
       _selectedFarm = widget.farmNames.contains(crop.farmName)
           ? crop.farmName
-          : null;
-      _growthStage = crop.growthStage;
-      _season = crop.season;
+          : (widget.farmNames.isNotEmpty ? widget.farmNames.first : null);
+      _growthStage = _stages.contains(crop.growthStage)
+          ? crop.growthStage
+          : 'Initial';
+      _season = _seasons.contains(crop.season) ? crop.season : 'Kharif';
     } else {
       _selectedFarm = widget.farmNames.isNotEmpty
           ? widget.farmNames.first
           : null;
+      _plantingDate = DateTime.now();
     }
   }
 
@@ -92,20 +86,21 @@ class _AddCropScreenState extends State<AddCropScreen> {
         _selectedFarm == null ||
         _plantingDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill all fields correctly'),
-        ),
+        const SnackBar(content: Text('Please fill all fields correctly')),
       );
       return;
     }
 
     final crop = Crop(
+      id: widget.existingCrop?.id,
+      farmId: widget.existingCrop?.farmId,
       name: _nameController.text.trim(),
       variety: _varietyController.text.trim().isEmpty
           ? 'Not specified'
           : _varietyController.text.trim(),
       farmName: _selectedFarm!,
       area: area,
+      areaUnit: widget.existingCrop?.areaUnit ?? 'Acres',
       plantingDate: _plantingDate!,
       growthStage: _growthStage,
       season: _season,
@@ -126,9 +121,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Crop' : 'Add Crop'),
-      ),
+      appBar: AppBar(title: Text(_isEditing ? 'Edit Crop' : 'Add Crop')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -160,10 +153,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
                   Icons.landscape_outlined,
                 ),
                 items: widget.farmNames.map((farm) {
-                  return DropdownMenuItem(
-                    value: farm,
-                    child: Text(farm),
-                  );
+                  return DropdownMenuItem(value: farm, child: Text(farm));
                 }).toList(),
                 onChanged: (value) {
                   setState(() => _selectedFarm = value);
@@ -204,15 +194,9 @@ class _AddCropScreenState extends State<AddCropScreen> {
 
               DropdownButtonFormField<String>(
                 initialValue: _growthStage,
-                decoration: _decoration(
-                  'Growth Stage',
-                  Icons.trending_up,
-                ),
+                decoration: _decoration('Growth Stage', Icons.trending_up),
                 items: _stages.map((stage) {
-                  return DropdownMenuItem(
-                    value: stage,
-                    child: Text(stage),
-                  );
+                  return DropdownMenuItem(value: stage, child: Text(stage));
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -230,10 +214,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
                   Icons.wb_sunny_outlined,
                 ),
                 items: _seasons.map((season) {
-                  return DropdownMenuItem(
-                    value: season,
-                    child: Text(season),
-                  );
+                  return DropdownMenuItem(value: season, child: Text(season));
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -278,9 +259,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
       prefixIcon: Icon(icon),
       filled: true,
       fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -294,9 +273,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      decoration: _decoration(label, icon).copyWith(
-        hintText: hint,
-      ),
+      decoration: _decoration(label, icon).copyWith(hintText: hint),
     );
   }
 }
