@@ -1,6 +1,6 @@
 """Live weather via Open-Meteo (free, no API key). Returns None when unavailable."""
 import time
-
+from datetime import date
 import httpx
 from sqlalchemy.orm import Session
 
@@ -99,3 +99,45 @@ def forecast_for_farm(farm: Farm, db: Session) -> dict | None:
         farm.latitude, farm.longitude = coords
         db.commit()
     return get_forecast(farm.latitude, farm.longitude)
+
+def get_daily_series(lat: float, lon: float, past_days: int = 21) -> list[dict] | None:
+    """Rain and ET0 for the last `past_days` days plus the next 7 days (used by the water balance)."""
+    key = ("series", round(lat, 2), round(lon, 2), past_days)
+    hit = _CACHE.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
+    data = None
+    try:
+        r = httpx.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat, "longitude": lon, "timezone": "auto",
+                "past_days": past_days, "forecast_days": 7,
+                "daily": "precipitation_sum,et0_fao_evapotranspiration",
+            },
+            timeout=settings.weather_timeout_seconds,
+        )
+        r.raise_for_status()
+        d = r.json()["daily"]
+        data = [
+            {
+                "date": date.fromisoformat(d["time"][i]),
+                "rain_mm": d["precipitation_sum"][i],
+                "et0_mm": d["et0_fao_evapotranspiration"][i],
+            }
+            for i in range(len(d["time"]))
+        ]
+    except Exception:
+        data = None
+    _CACHE[key] = (time.time() + (_OK_TTL if data else _FAIL_TTL), data)
+    return data
+
+
+def series_for_farm(farm: Farm, db: Session, past_days: int = 21) -> list[dict] | None:
+    if farm.latitude is None or farm.longitude is None:
+        coords = geocode(farm.location)
+        if coords is None:
+            return None
+        farm.latitude, farm.longitude = coords
+        db.commit()
+    return get_daily_series(farm.latitude, farm.longitude, past_days)
