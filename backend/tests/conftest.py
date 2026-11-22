@@ -36,6 +36,7 @@ def client(monkeypatch):
 
     app.dependency_overrides[get_db] = override
     monkeypatch.setattr(weather, "get_forecast", lambda lat, lon: FAKE)
+    monkeypatch.setattr(weather, "get_daily_series", lambda lat, lon, past_days=21: None)
     monkeypatch.setattr(weather, "geocode", lambda name: (26.14, 91.73))
     with TestClient(app) as c:
         yield c

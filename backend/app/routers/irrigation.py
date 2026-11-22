@@ -10,7 +10,7 @@ from app.dependencies import get_current_user, get_owned_farm, user_farms
 from app.database_models import Farm, IrrigationLog, IrrigationPrediction, User
 from app.api_schemas import IrrigationLogIn, RecommendationIn, ScheduleIn
 from app.services import weather
-from app.services.irrigation_planner import plan_for_farm
+from app.services.irrigation_planner import plan_for_farm_db, suggest_next
 
 router = APIRouter(prefix="/irrigation", tags=["irrigation"])
 
@@ -35,8 +35,7 @@ def log_out(log: IrrigationLog) -> dict:
 
 
 def _plan(db: Session, farm: Farm) -> dict:
-    return plan_for_farm(farm, weather.forecast_for_farm(farm, db))
-
+    return plan_for_farm_db(db, farm)
 
 def _user_logs(db: Session, user: User, farm_id: int | None, status: str):
     q = select(IrrigationLog).join(Farm).where(Farm.user_id == user.id, IrrigationLog.status == status)
@@ -71,7 +70,7 @@ def overview(farm_id: int | None = None, db: Session = Depends(get_db), user: Us
     elif done_today:
         nxt = {"scheduled": False, "label": "Next irrigation not scheduled"}
     else:
-        nxt = {"scheduled": False, "label": "Tomorrow morning", "suggested_window": "6:00 AM - 8:00 AM"}
+        nxt = suggest_next(plans)
 
     return {
         "status": "Completed Today" if done_today else "Needs Monitoring",
@@ -114,7 +113,8 @@ def mark_irrigated(body: IrrigationLogIn, db: Session = Depends(get_db), user: U
     farm = get_owned_farm(db, user, body.farm_id)
     amount = body.amount_liters
     if amount is None:
-        amount = _plan(db, farm)["daily_liters"] or None
+        plan = _plan(db, farm)
+        amount = plan["daily_liters"] or plan.get("crop_demand_liters") or None
     if amount is None:
         raise HTTPException(400, "amount_liters is required (no estimate available for this farm)")
     log = IrrigationLog(farm_id=farm.id, amount_liters=amount, method=body.method,
