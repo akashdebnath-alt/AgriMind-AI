@@ -1,6 +1,7 @@
 import os
 
 os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["GEMINI_API_KEY"] = ""
 
 import pytest
 from fastapi.testclient import TestClient

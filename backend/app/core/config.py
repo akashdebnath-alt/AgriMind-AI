@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     weather_timeout_seconds: float = 6.0
     default_et0_mm: float = 4.0  # used only when live weather is unavailable
 
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.8-flash"
+    adviser_timeout_seconds: float = 9.0  # the app gives up after 12 seconds
+
     @property
     def cors_list(self) -> list[str]:
         origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
