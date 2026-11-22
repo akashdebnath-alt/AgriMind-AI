@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 *.db
 .venv/
+
+backend/app/data/kb_index.json

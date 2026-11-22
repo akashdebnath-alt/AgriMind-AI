@@ -4,6 +4,7 @@ Returns None if anything goes wrong (no key, no internet, quota used up, ...), s
 caller can fall back to the plain knowledge-base answer and the app never breaks.
 """
 import logging
+import time
 
 import httpx
 
@@ -18,7 +19,8 @@ def llm_enabled() -> bool:
     return bool(settings.gemini_api_key.strip())
 
 
-def ask_gemini(system_prompt: str, user_prompt: str) -> str | None:
+def ask_gemini(system_prompt: str, user_prompt: str, timeout: float | None = None) -> str | None:
+    """`timeout` is the total number of seconds Gemini may take (including the retry)."""
     if not llm_enabled():
         return None
 
@@ -37,10 +39,14 @@ def ask_gemini(system_prompt: str, user_prompt: str) -> str | None:
         "Content-Type": "application/json",
     }
     url = API_URL.format(model=settings.gemini_model.strip())
+    deadline = time.monotonic() + (timeout if timeout is not None else settings.adviser_timeout_seconds)
 
     for body in attempts:
+        remaining = deadline - time.monotonic()
+        if remaining < 1.0:
+            return None
         try:
-            r = httpx.post(url, headers=headers, json=body, timeout=settings.adviser_timeout_seconds)
+            r = httpx.post(url, headers=headers, json=body, timeout=remaining)
         except httpx.HTTPError as e:
             log.warning("Gemini request failed: %s", type(e).__name__)
             return None

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.8-flash"
     adviser_timeout_seconds: float = 9.0  # the app gives up after 12 seconds
 
+    gemini_embedding_model: str = "gemini-embedding-001"
+    rag_min_similarity: float = 0.6
+    adviser_total_seconds: float = 11.0  # the app gives up after 12 seconds
+
     @property
     def cors_list(self) -> list[str]:
         origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
