@@ -83,7 +83,7 @@ def _water_balance_plan(farm: Farm, series: list[dict], logs: list[IrrigationLog
             day = log.occurred_at.date()
             irrigation_net[day] = irrigation_net.get(day, 0.0) + applied_mm * wb.irrigation_efficiency(log.method)
 
-    crops_out, today_l, week_l, demand_l, area_total = [], 0.0, 0.0, 0.0, 0.0
+    crops_out, today_l, week_l, demand_l, weekly_demand_l, area_total = [], 0.0, 0.0, 0.0, 0.0, 0.0
     any_unknown, soil_unknown = False, False
     any_today, next_dates = False, []
     for crop in farm.crops:
@@ -116,6 +116,15 @@ def _water_balance_plan(farm: Farm, series: list[dict], logs: list[IrrigationLog
         today_l += liters_today
         week_l += res["weekly_gross_mm"] * area_ha * 10_000
         demand_l += daily_requirement(kc, et0_today, rain_today, area_ha)["liters"]
+        weekly_demand_l += sum(
+            daily_requirement(
+                kc,
+                float(day["et0_mm"]),
+                float(day["rain_mm"]),
+                area_ha,
+            )["liters"]
+            for day in days
+        )
         area_total += area_ha
         any_today = any_today or res["irrigate_today"]
         nxt = res["next_irrigation_date"]
@@ -152,6 +161,8 @@ def _water_balance_plan(farm: Farm, series: list[dict], logs: list[IrrigationLog
     return {
         "farm_id": farm.id, "farm_name": farm.farm_name,
         "daily_liters": round(today_l), "weekly_liters": round(week_l),
+        "daily_crop_demand_liters": round(demand_l),
+        "weekly_crop_demand_liters": round(weekly_demand_l),
         "average_mm_today": round(avg_mm, 2), "confidence": confidence,
         "weather_source": "live" if live else "fallback", "recommendation": text,
         "assumptions": assumptions, "crops": crops_out,
@@ -212,6 +223,8 @@ def _baseline_plan(farm: Farm, forecast: dict | None) -> dict:
     return {
         "farm_id": farm.id, "farm_name": farm.farm_name,
         "daily_liters": round(today_total), "weekly_liters": round(week_total),
+        "daily_crop_demand_liters": round(today_total),
+        "weekly_crop_demand_liters": round(week_total),
         "average_mm_today": round(avg_mm, 2), "confidence": confidence,
         "weather_source": "live" if live else "fallback", "recommendation": text,
         "assumptions": assumptions, "crops": crops_out,

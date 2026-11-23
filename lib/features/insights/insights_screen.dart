@@ -34,7 +34,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     {'name': 'Potato', 'area': '0.5 acres', 'progress': 0.70},
   ];
 
-  // Weekly activity
+  // Last 7 days activity
   List<Map<String, dynamic>> _weeklyDays = [
     {'day': 'Mon', 'value': 0.60},
     {'day': 'Tue', 'value': 0.90},
@@ -120,7 +120,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             }).toList();
           }
 
-          // Weekly activity
+          // Last 7 days activity
           if (data['weekly_activity'] is List &&
               (data['weekly_activity'] as List).isNotEmpty) {
             _weeklyDays = (data['weekly_activity'] as List).map((d) {
@@ -230,7 +230,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
                 const SizedBox(height: 24),
 
-                // Weekly activity
+                // Last 7 days activity
                 _buildWeeklyActivity(),
 
                 const SizedBox(height: 24),
@@ -382,7 +382,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           const SizedBox(height: 8),
 
           Text(
-            'Weekly irrigation water consumption',
+            'Water used in the last 7 days',
             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
 
@@ -400,13 +400,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
           const SizedBox(height: 5),
 
           Text(
-            'Completed irrigation logs vs. weekly requirement',
+            'Completed logs in the last 7 days vs. weekly irrigation requirement',
             style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
           ),
 
           const SizedBox(height: 20),
 
-          _progressRow('Water used', _usedRatio, _usedPctLabel),
+          _progressRow('Water used in the last 7 days', _usedRatio, _usedPctLabel),
           const SizedBox(height: 15),
           _progressRow('Water remaining', _remainingRatio, _remainingPctLabel),
         ],
@@ -547,7 +547,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Weekly Irrigation Activity',
+            'Last 7 days irrigation activity',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -558,7 +558,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           const SizedBox(height: 6),
 
           Text(
-            'Irrigation activity from completed logs this week',
+            'Irrigation activity from completed logs in the last 7 days',
             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
 

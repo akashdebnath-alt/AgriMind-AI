@@ -28,6 +28,8 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
   String _statusText = 'Needs Monitoring';
   String _dailyEstimate = '450 L';
   String _weeklyEstimate = '3,150 L';
+  String _dailyCropDemand = '--';
+  String _weeklyCropDemand = '--';
   String _nextIrrigationTitle = 'Tomorrow morning';
   String _nextIrrigationSubtitle = 'Suggested time: 6:00 AM - 8:00 AM';
   String _note =
@@ -94,6 +96,14 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           final weekly = overview['weekly_estimate_liters'];
           if (weekly != null) {
             _weeklyEstimate = '${(weekly as num).round()} L';
+          }
+          final dailyDemand = overview['daily_crop_demand_liters'];
+          if (dailyDemand != null) {
+            _dailyCropDemand = '${(dailyDemand as num).round()} L';
+          }
+          final weeklyDemand = overview['weekly_crop_demand_liters'];
+          if (weeklyDemand != null) {
+            _weeklyCropDemand = '${(weeklyDemand as num).round()} L';
           }
 
           final nxt = overview['next_irrigation'] as Map<String, dynamic>?;
@@ -694,15 +704,33 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           Row(
             children: [
               _requirementItem(
-                'Daily Estimate',
+                'Irrigation required today',
                 _dailyEstimate,
                 Icons.water_drop,
               ),
               const SizedBox(width: 12),
               _requirementItem(
-                'Weekly Estimate',
+                'Irrigation required next 7 days',
                 _weeklyEstimate,
                 Icons.calendar_month,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              _requirementItem(
+                'Crop water demand today',
+                _dailyCropDemand,
+                Icons.grass,
+              ),
+              const SizedBox(width: 12),
+              _requirementItem(
+                'Crop water demand next 7 days',
+                _weeklyCropDemand,
+                Icons.eco,
               ),
             ],
           ),

@@ -10,11 +10,10 @@ from app.db.session import get_db
 from app.dependencies import get_current_user, user_farms
 from app.database_models import Farm, IrrigationLog, User
 from app.services import weather
-from app.services.irrigation_planner import plan_for_farm
+from app.services.irrigation_planner import plan_for_farm_db
 from app.services.area_units import ACRE_IN_HECTARES
 
 router = APIRouter(prefix="/insights", tags=["insights"])
-DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
 @router.get("")
@@ -24,22 +23,32 @@ def insights(db: Session = Depends(get_db), user: User = Depends(get_current_use
     farm_ha = sum(float(f.area_hectares) for f in farms)
     crop_ha = sum(float(c.area_hectares) for c in crops)
 
-    week_start = today_local() - timedelta(days=today_local().weekday())
+    now = now_local()
+    period_start = (now - timedelta(days=6)).replace(hour=0, minute=0, second=0, microsecond=0)
+    period_end = now
     logs = db.scalars(
         select(IrrigationLog).join(Farm)
         .where(Farm.user_id == user.id, IrrigationLog.status == "completed",
-               IrrigationLog.occurred_at >= week_start_dt(week_start))
+               IrrigationLog.occurred_at >= period_start)
     ).all()
-    per_day = defaultdict(float)
+    per_date = defaultdict(float)
     for l in logs:
-        per_day[l.occurred_at.date().weekday()] += l.amount_liters or 0.0
-    used = sum(per_day.values())
-    peak = max(per_day.values(), default=0.0)
+        per_date[l.occurred_at.date()] += l.amount_liters or 0.0
+    used = sum(per_date.values())
+    activity = [
+        {
+            "day": (period_start.date() + timedelta(days=i)).strftime("%a"),
+            "date": (period_start.date() + timedelta(days=i)).isoformat(),
+            "liters": round(per_date[period_start.date() + timedelta(days=i)]),
+        }
+        for i in range(7)
+    ]
+    activity_peak = max((item["liters"] for item in activity), default=0)
 
     plans, rain_soon = [], False
     for f in farms:
         fc = weather.forecast_for_farm(f, db)
-        plans.append(plan_for_farm(f, fc))
+        plans.append(plan_for_farm_db(db, f))
         if fc:
             rain_soon = rain_soon or any((d.get("rain_mm") or 0) >= 5 for d in fc["daily"][:2])
     recommended = sum(p["weekly_liters"] for p in plans)
@@ -59,7 +68,10 @@ def insights(db: Session = Depends(get_db), user: User = Depends(get_current_use
             "used_liters": round(used), "recommended_weekly_liters": recommended,
             "used_ratio": None if ratio is None else round(ratio, 2),
             "remaining_ratio": None if ratio is None else round(1 - ratio, 2),
-            "basis": "Completed irrigation logs this week vs. estimated weekly crop requirement",
+            "period_start": period_start.date().isoformat(),
+            "period_end": period_end.date().isoformat(),
+            "period_label": "Last 7 days",
+            "basis": "Completed irrigation logs in the last 7 days vs. FAO-56 estimated weekly irrigation requirement",
         },
         "crop_distribution": [
             {"name": n, "area_acres": round(ha / ACRE_IN_HECTARES, 2),
@@ -67,15 +79,16 @@ def insights(db: Session = Depends(get_db), user: User = Depends(get_current_use
             for n, ha in sorted(by_crop.items(), key=lambda kv: -kv[1])
         ],
         "weekly_activity": [
-            {"day": DAYS[i], "liters": round(per_day.get(i, 0)), "value": round(per_day.get(i, 0) / peak, 2) if peak else 0}
-            for i in range(7)
+            {
+                "day": item["day"],
+                "date": item["date"],
+                "liters": item["liters"],
+                "value": round(item["liters"] / activity_peak, 2) if activity_peak else 0,
+            }
+            for item in activity
         ],
         "recommendations": recommendations(farms, crops, rain_soon, bool(logs)),
     }
-
-
-def week_start_dt(d):
-    return now_local().replace(year=d.year, month=d.month, day=d.day, hour=0, minute=0, second=0, microsecond=0)
 
 
 def recommendations(farms, crops, rain_soon, irrigated_this_week):
@@ -88,7 +101,7 @@ def recommendations(farms, crops, rain_soon, irrigated_this_week):
         recs.append({"icon": "weather", "title": "Rain expected soon",
                      "description": "Consider deferring irrigation; 5 mm or more is forecast within 2 days."})
     if crops and not irrigated_this_week:
-        recs.append({"icon": "water", "title": "No irrigation logged this week",
+        recs.append({"icon": "water", "title": "No irrigation logged in the last 7 days",
                      "description": "Check soil moisture and log irrigation so usage insights stay accurate."})
     recs += [
         {"icon": "water", "title": "Monitor soil moisture", "description": "Check soil moisture before your next irrigation session."},

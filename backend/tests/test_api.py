@@ -89,6 +89,59 @@ def test_irrigation_log_overview_insights(client):
     assert client.get(f"{B}/dashboard", headers=h).json()["irrigation_status"] == "Completed"
 
 
+def test_last_seven_days_usage_includes_yesterday(client):
+    from app.core.time_utils import now_local
+    from app.database_models import IrrigationLog
+    from app.db.session import get_db
+    from app.main import app
+
+    h = auth_headers(client)
+    farm = make_farm(client, h)
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        db.add(IrrigationLog(
+            farm_id=farm["id"], amount_liters=1250,
+            method="Drip irrigation", status="completed",
+            occurred_at=now_local() - timedelta(days=1),
+        ))
+        db.add(IrrigationLog(
+            farm_id=farm["id"], amount_liters=9999,
+            method="Drip irrigation", status="completed",
+            occurred_at=now_local() - timedelta(days=8),
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(f"{B}/insights", headers=h)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["overview"]["water_used_liters"] == 1250
+    assert data["water_usage"]["used_liters"] == 1250
+    assert data["water_usage"]["basis"].startswith("Completed irrigation logs in the last 7 days")
+
+
+def test_overview_keeps_existing_fields_and_adds_crop_demand(client):
+    h = auth_headers(client)
+    farm = make_farm(client, h)
+    client.post(f"{B}/crops", headers=h, json={
+        "farm_id": farm["id"], "name": "Tomato", "area": 2,
+        "area_unit": "Acres", "planting_date": str(date.today()),
+        "growth_stage": "Mid-season",
+    })
+
+    response = client.get(f"{B}/irrigation/overview", headers=h)
+    assert response.status_code == 200
+    data = response.json()
+    assert "daily_estimate_liters" in data
+    assert "weekly_estimate_liters" in data
+    assert "daily_crop_demand_liters" in data
+    assert "weekly_crop_demand_liters" in data
+    assert isinstance(data["daily_crop_demand_liters"], int)
+    assert isinstance(data["weekly_crop_demand_liters"], int)
+
+
 def test_weather_and_adviser(client):
     h = auth_headers(client)
     assert client.get(f"{B}/weather", headers=h).status_code == 404

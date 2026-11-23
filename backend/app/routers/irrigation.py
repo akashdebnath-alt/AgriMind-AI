@@ -50,6 +50,8 @@ def overview(farm_id: int | None = None, db: Session = Depends(get_db), user: Us
     plans = [_plan(db, f) for f in farms]
     daily = sum(p["daily_liters"] for p in plans)
     weekly = sum(p["weekly_liters"] for p in plans)
+    daily_crop_demand = sum(p["crop_demand_liters"] for p in plans)
+    weekly_crop_demand = sum(p.get("weekly_crop_demand_liters", p["crop_demand_liters"]) for p in plans)
     assumptions = sorted({a for p in plans for a in p["assumptions"]})
 
     today_start = now_local().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -76,6 +78,8 @@ def overview(farm_id: int | None = None, db: Session = Depends(get_db), user: Us
         "status": "Completed Today" if done_today else "Needs Monitoring",
         "irrigated_today": done_today is not None,
         "daily_estimate_liters": daily, "weekly_estimate_liters": weekly,
+        "daily_crop_demand_liters": daily_crop_demand,
+        "weekly_crop_demand_liters": weekly_crop_demand,
         "is_estimate": True, "assumptions": assumptions,
         "next_irrigation": nxt, "history": [log_out(h) for h in history],
         "note": "Estimates use crop stage, area, weather and rainfall (ETc = Kc x ET0).",
