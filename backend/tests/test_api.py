@@ -195,6 +195,32 @@ def test_adviser_existing_plan_matches_irrigation_overview(client, monkeypatch):
     assert existing["weekly_liters"] == overview["weekly_estimate_liters"]
 
 
+def test_model_matches_crop_water_thresholds():
+    from app.services.irrigation_ml import predict_irrigation
+
+    depletion = {
+        "rice": 0.20, "cereal": 0.55, "pulse": 0.50, "oilseed": 0.60,
+        "fiber": 0.65, "tuber": 0.35, "vegetable": 0.40, "fruit": 0.50,
+        "other": 0.50, "mixed": 0.45, "none": 0.50, "unknown": 0.50,
+    }
+    context_base = {
+        "growth_stage": "Mid-season", "soil_type": "loamy",
+    }
+    readings = {
+        "air_temperature_c": 25, "humidity_pct": 60,
+        "soil_temperature_c": 25, "rainfall_mm": 0, "et0_mm": 4.5,
+    }
+    for crop_type, p in depletion.items():
+        threshold = (1 - p) * 100
+        for moisture in (threshold - 4, threshold + 4):
+            prediction = predict_irrigation(
+                {**readings, "soil_moisture_pct": moisture},
+                {**context_base, "crop_type": crop_type},
+            )
+            expected = crop_type != "none" and moisture < threshold
+            assert prediction["irrigation_needed"] == expected
+
+
 def test_irrigation_model_handles_dry_and_wet_conditions():
     from app.services.irrigation_ml import predict_irrigation
 

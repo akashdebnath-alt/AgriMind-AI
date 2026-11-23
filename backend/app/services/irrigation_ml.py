@@ -1,4 +1,9 @@
-"""Inference for the synthetic-data Random Forest irrigation model."""
+"""Inference for the synthetic-data Random Forest irrigation model.
+
+soil_moisture_pct represents the percent of plant-available water remaining
+in the root zone. This is a demonstration model based on synthetic data, not
+real-world accuracy or a guarantee.
+"""
 from functools import lru_cache
 import math
 from pathlib import Path

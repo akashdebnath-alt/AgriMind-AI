@@ -2,6 +2,12 @@
 
 Run from the backend directory with:
     python -m app.services.train_irrigation_model
+
+The label uses each crop type's depletion fraction p: threshold =
+(1 - p) * 100 + (ET0 - 4.5) - min(rainfall, 20). Irrigation is needed when
+soil_moisture_pct is below that threshold. This field is the percentage of
+plant-available water remaining in the root zone. The resulting model is
+synthetic data, not real-world accuracy.
 """
 import csv
 import json
@@ -28,7 +34,12 @@ RANDOM_STATE = 42
 def generate_dataset(path: Path = DATASET_PATH, samples: int = 5_000) -> None:
     rng = np.random.default_rng(RANDOM_STATE)
     rows = []
-    for _ in range(samples):
+    depletion_fraction = {
+        "rice": 0.20, "cereal": 0.55, "pulse": 0.50, "oilseed": 0.60,
+        "fiber": 0.65, "tuber": 0.35, "vegetable": 0.40, "fruit": 0.50,
+        "other": 0.50, "mixed": 0.45, "none": 0.50, "unknown": 0.50,
+    }
+    for sample_index in range(samples):
         moisture = float(rng.uniform(5.0, 90.0))
         air_temperature = float(rng.uniform(10.0, 45.0))
         humidity = float(rng.uniform(20.0, 100.0))
@@ -51,27 +62,21 @@ def generate_dataset(path: Path = DATASET_PATH, samples: int = 5_000) -> None:
         soil_type = str(rng.choice(
             SOIL_TYPES, p=[0.20, 0.20, 0.25, 0.10, 0.10, 0.10, 0.05],
         ))
-
-        crop_adjustment = {
-            "rice": 8.0, "cereal": 1.0, "pulse": -2.0, "oilseed": -1.0,
-            "fiber": 2.0, "tuber": 3.0, "vegetable": 5.0, "fruit": 4.0,
-            "other": 0.0, "mixed": 2.0, "none": 0.0, "unknown": 0.0,
-        }
-        stage_adjustment = {
-            "Initial": -4.0, "Development": 0.0, "Mid-season": 5.0,
-            "Late-season": 1.0, "Harvest": -5.0, "Mixed": 0.0, "Unknown": 0.0,
-        }
-        soil_adjustment = {
-            "sandy": 7.0, "clay": -3.0, "loamy": 0.0, "silty": -1.0,
-            "red": 2.0, "black": -2.0, "unknown": 0.0,
-        }
-        threshold = (
-            38.0 + crop_adjustment[crop_type] + stage_adjustment[growth_stage]
-            + soil_adjustment[soil_type] + (et0 - 4.5) * 1.8
-            + (air_temperature - 28.0) * 0.2
-            + (soil_temperature - 25.0) * 0.15
-            + (50.0 - humidity) * 0.04 - min(rainfall, 20.0) * 1.1
-        )
+        boundary_count = len(depletion_fraction) * 5
+        if sample_index < boundary_count:
+            crop_type = tuple(depletion_fraction)[(sample_index // 5)]
+            threshold = (1 - depletion_fraction[crop_type]) * 100
+            offset = (-8.0, -4.0, 0.0, 4.0, 8.0)[sample_index % 5]
+            moisture = threshold + offset
+            air_temperature = 25.0
+            humidity = 60.0
+            soil_temperature = 25.0
+            rainfall = 0.0
+            et0 = 4.5
+            growth_stage = "Mid-season"
+            soil_type = "loamy"
+        p = depletion_fraction[crop_type]
+        threshold = (1 - p) * 100 + (et0 - 4.5) * 1.0 - min(rainfall, 20.0) * 1.0
         irrigation_needed = int(crop_type != "none" and moisture < threshold)
         rows.append({
             "soil_moisture_pct": round(moisture, 2),
@@ -120,7 +125,7 @@ def train_and_evaluate(
     model = make_pipeline(
         DictVectorizer(),
         RandomForestClassifier(
-            n_estimators=250, max_depth=12, min_samples_leaf=3,
+            n_estimators=800, max_depth=None, min_samples_leaf=1,
             class_weight="balanced", random_state=RANDOM_STATE, n_jobs=-1,
         ),
     )
