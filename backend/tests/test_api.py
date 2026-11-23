@@ -101,6 +101,26 @@ def test_weather_and_adviser(client):
     assert miss["grounded"] is False
 
 
+def test_adviser_knowledge_base_entries_and_retrieval():
+    from app.services.adviser_knowledge_base import ENTRIES, retrieve
+
+    ids = [entry["id"] for entry in ENTRIES]
+    assert len(ids) == len(set(ids))
+    for entry in ENTRIES:
+        assert {"id", "title", "keywords", "text"} <= set(entry)
+        assert all(keyword == keyword.lower() for keyword in entry["keywords"])
+
+    samples = {
+        "What signs show overwatering?": "overwatering-signs",
+        "How should tomato plants be irrigated?": "tomato-water",
+        "How do I manage fungal disease in humid weather?": "fungal-disease",
+        "What is the best time to irrigate?": "best-time-irrigate",
+        "How should I plan around rain in the forecast?": "forecast-planning",
+    }
+    for question, expected_id in samples.items():
+        assert expected_id in {entry["id"] for entry in retrieve(question, limit=3)}
+
+
 def test_virtual_sensor_ml_llm_rag_pipeline(client, monkeypatch):
     from app.routers import adviser
 
