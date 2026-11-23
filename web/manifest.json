@@ -1,6 +1,6 @@
 {
-    "name": "agrimind_ai",
-    "short_name": "agrimind_ai",
+    "name": "AgriMind AI",
+    "short_name": "AgriMind AI",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

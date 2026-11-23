@@ -191,6 +191,25 @@ flutter analyze
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
+## Building a release APK
+
+Create a release keystore yourself; do not commit it or its passwords:
+
+```powershell
+keytool -genkey -v -keystore android\app\agrimind-release.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias agrimind
+```
+
+Create `android/key.properties` with placeholder values:
+
+```properties
+storePassword=<YOUR_STORE_PASSWORD>
+keyPassword=<YOUR_KEY_PASSWORD>
+keyAlias=agrimind
+storeFile=app/agrimind-release.jks
+```
+
+When `android/key.properties` is absent, release builds continue to use the current Android debug signing configuration.
+
 ## ⚙️ Configuration
 
 Settings live in `backend/.env`. Keep only setting names here; never commit real values:

@@ -16,7 +16,7 @@ migrate_working_dir/
 backend/.env
 backend/agrimind_dev.db
 backend/.pytest_cache/
-
+app/data/kb_index.json
 # IntelliJ related
 *.iml
 *.ipr
@@ -48,6 +48,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+android/key.properties
+*.jks
+*.keystore
 
 # Widget Preview related
 .widget_preview/
