@@ -170,6 +170,31 @@ def test_virtual_sensor_ml_llm_rag_pipeline(client, monkeypatch):
     assert repeated.json()["irrigation_assessment"]["virtual_sensor"]["readings"] == readings
 
 
+def test_adviser_existing_plan_matches_irrigation_overview(client, monkeypatch):
+    from app.routers import adviser
+    from app.services import rag
+
+    monkeypatch.setattr(rag, "semantic_scores", lambda query, timeout=3.0: {})
+    monkeypatch.setattr(adviser, "llm_enabled", lambda: False)
+    h = auth_headers(client)
+    farm = make_farm(client, h)
+    client.post(f"{B}/crops", headers=h, json={
+        "farm_id": farm["id"], "name": "Tomato", "area": 1,
+        "area_unit": "Hectares", "planting_date": str(date.today()),
+        "growth_stage": "Mid-season",
+    })
+
+    overview = client.get(f"{B}/irrigation/overview", headers=h).json()
+    response = client.post(f"{B}/adviser/chat", headers=h, json={
+        "message": "Assess irrigation", "farm_id": farm["id"],
+        "include_irrigation_assessment": True,
+    }).json()
+    existing = response["irrigation_assessment"]["existing_plan"]
+
+    assert existing["daily_liters"] == overview["daily_estimate_liters"]
+    assert existing["weekly_liters"] == overview["weekly_estimate_liters"]
+
+
 def test_irrigation_model_handles_dry_and_wet_conditions():
     from app.services.irrigation_ml import predict_irrigation
 

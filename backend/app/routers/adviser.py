@@ -12,7 +12,7 @@ from app.dependencies import get_current_user, get_owned_farm
 from app.services import rag, weather
 from app.services.adviser_knowledge_base import SUGGESTIONS
 from app.services.irrigation_ml import predict_irrigation
-from app.services.irrigation_planner import plan_for_farm
+from app.services.irrigation_planner import plan_for_farm_db
 from app.services.llm import ask_gemini, llm_enabled
 from app.services.virtual_sensors import simulate_readings
 
@@ -67,7 +67,7 @@ def _irrigation_assessment(db: Session, user: User, farm_id: int) -> dict:
     farm = get_owned_farm(db, user, farm_id)
     forecast = weather.forecast_for_farm(farm, db)
     today = today_local()
-    plan = plan_for_farm(farm, forecast, today=today)
+    plan = plan_for_farm_db(db, farm)
     sensor = simulate_readings(farm, forecast, plan, today)
     prediction = predict_irrigation(sensor["readings"], sensor["farm_context"])
     plan_recommends = plan.get("irrigate_today")
