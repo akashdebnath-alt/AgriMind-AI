@@ -5,5 +5,4 @@ __pycache__/
 *.db
 .venv/
 
-backend/app/data/kb_index.json
 app/data/kb_index.json
