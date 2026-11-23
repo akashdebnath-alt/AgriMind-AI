@@ -556,9 +556,14 @@ class ApiService {
   Future<Map<String, dynamic>> sendAdviserChat(
     String message, {
     int? farmId,
+    bool includeIrrigationAssessment = false,
   }) async {
     final uri = Uri.parse('$baseUrl${ApiConstants.adviserChat}');
-    final body = <String, dynamic>{'message': message, 'farm_id': ?farmId};
+    final body = <String, dynamic>{
+      'message': message,
+      'farm_id': ?farmId,
+      'include_irrigation_assessment': includeIrrigationAssessment,
+    };
     final res = await _safeCall(
       () => http.post(uri, headers: _buildHeaders(), body: jsonEncode(body)),
     );

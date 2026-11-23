@@ -130,3 +130,4 @@ class RecommendationIn(BaseModel):
 class AdviserIn(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     farm_id: int | None = None
+    include_irrigation_assessment: bool = False

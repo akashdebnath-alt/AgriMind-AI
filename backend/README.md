@@ -12,6 +12,7 @@ FastAPI and SQLAlchemy REST API for the Flutter client. SQLite is used for local
 - ETc calculations (`ETc = Kc x ET0`)
 - Dashboard and insight aggregates
 - Grounded retrieval-based AI adviser
+- Deterministic virtual soil/weather readings and a crop-aware, synthetic-data Random Forest irrigation assessment, integrated with the AI Adviser
 
 ## Quick start on Windows
 
@@ -82,3 +83,7 @@ The tests use an isolated in-memory SQLite database and mocked weather responses
 - `docs/API.md` - Flutter endpoint contract
 
 Set a strong random `SECRET_KEY` before deploying. See [docs/API.md](docs/API.md) for the complete endpoint contract.
+
+The irrigation assessment uses a synthetic training dataset and simulated sensor values for demonstration.
+It is not a substitute for field measurements or local agronomic advice. To regenerate the dataset, train
+the model, and write hold-out metrics, run `py -m app.services.train_irrigation_model` from `backend`.
