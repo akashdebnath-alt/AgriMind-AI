@@ -31,6 +31,11 @@ ENTRIES = [
              "roots, since waterlogging starves roots of oxygen and favours root diseases. After the rain, avoid "
              "walking on wet fields, check for lodging or washed-out seedlings, and watch for fungal disease as "
              "humidity stays high."},
+    {"id": "heat-stress", "title": "Hot and dry weather",
+     "keywords": ["heat", "hot", "temperature", "dry", "stress", "et0", "evapotranspiration", "wind", "drought"],
+     "text": "Hot, dry or windy weather can increase crop water use. Check moisture in the root zone and use "
+             "local weather and crop-stage estimates before changing irrigation. Do not irrigate solely because "
+             "the soil surface looks dry; avoid overwatering and follow local agricultural guidance."},
     {"id": "soil-moisture", "title": "Checking soil moisture",
      "keywords": ["soil", "moisture", "dry", "wet", "check", "test", "root"],
      "text": "A simple field check: dig 10-15 cm near the roots and squeeze a handful of soil. If it crumbles and "

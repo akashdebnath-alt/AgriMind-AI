@@ -62,9 +62,20 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
     } catch (_) {}
   }
 
-  Future<void> _sendMessage([String? suggestedMessage]) async {
+  Future<void> _sendMessage({
+    String? suggestedMessage,
+    bool includeIrrigationAssessment = false,
+  }) async {
     final message = suggestedMessage ?? _controller.text.trim();
     if (message.isEmpty || _isTyping) return;
+    if (includeIrrigationAssessment && _selectedFarmId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add and select a farm for an assessment.'),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _messages.add({'text': message, 'isUser': true});
@@ -78,6 +89,7 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
       final response = await ApiService().sendAdviserChat(
         message,
         farmId: _selectedFarmId,
+        includeIrrigationAssessment: includeIrrigationAssessment,
       );
 
       final reply =
@@ -94,6 +106,7 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
           'isUser': false,
           'grounded': grounded,
           'sources': sources,
+          'assessment': response['irrigation_assessment'],
         });
         _isOnline = true;
       });
@@ -370,6 +383,26 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
             ),
           ),
 
+          const SizedBox(height: 18),
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _selectedFarmId == null
+                  ? null
+                  : () => _sendMessage(
+                      suggestedMessage: 'Give me personalized irrigation advice for this farm.',
+                      includeIrrigationAssessment: true,
+                    ),
+              icon: const Icon(Icons.sensors_outlined),
+              label: Text(
+                _selectedFarmId == null
+                    ? 'Add a farm for irrigation advice'
+                    : 'Assess irrigation for selected farm',
+              ),
+            ),
+          ),
+
           const SizedBox(height: 30),
 
           const Text(
@@ -427,7 +460,7 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: () => _sendMessage(suggestion),
+        onTap: () => _sendMessage(suggestedMessage: suggestion),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(15),
@@ -474,6 +507,7 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
         final message = _messages[index];
         final isUser = message['isUser'] as bool;
         final sources = message['sources'] as List?;
+        final assessment = message['assessment'] as Map<String, dynamic>?;
 
         return Align(
           alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -499,6 +533,10 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
                     color: isUser ? Colors.white : AppColors.darkGreen,
                   ),
                 ),
+                if (!isUser && assessment != null) ...[
+                  const SizedBox(height: 12),
+                  _buildAssessmentDetails(assessment),
+                ],
                 if (!isUser && sources != null && sources.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Wrap(
@@ -534,6 +572,94 @@ class _AIAdviserScreenState extends State<AIAdviserScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildAssessmentDetails(Map<String, dynamic> assessment) {
+    final sensor =
+        assessment['virtual_sensor'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final readings =
+        sensor['readings'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final prediction =
+        assessment['ml_prediction'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final probability = prediction['probability'];
+    final confidence = prediction['confidence'];
+    final probabilityText = probability is num
+        ? '${(probability * 100).round()}%'
+        : '--';
+    final confidenceText = confidence is num
+        ? '${(confidence * 100).round()}%'
+        : '--';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.lightGreen,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Virtual sensor readings (simulated)',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.darkGreen,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _assessmentReading(
+                'Soil moisture',
+                readings['soil_moisture_pct'],
+                '%',
+              ),
+              _assessmentReading(
+                'Air temp',
+                readings['air_temperature_c'],
+                ' C',
+              ),
+              _assessmentReading(
+                'Soil temp',
+                readings['soil_temperature_c'],
+                ' C',
+              ),
+              _assessmentReading('Humidity', readings['humidity_pct'], '%'),
+              _assessmentReading('Rainfall', readings['rainfall_mm'], ' mm'),
+              _assessmentReading('ET0', readings['et0_mm'], ' mm/day'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'ML: ${prediction['label'] ?? 'Unavailable'}; irrigation probability '
+            '$probabilityText; model score $confidenceText (not accuracy).',
+            style: const TextStyle(fontSize: 11, color: AppColors.darkGreen),
+          ),
+          if (assessment['decision_disagreement'] == true) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'The model and irrigation estimate differ. Check root-zone moisture.',
+              style: TextStyle(fontSize: 11, color: Colors.deepOrange),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _assessmentReading(String label, dynamic value, String unit) {
+    final reading = value is num ? '${value.toStringAsFixed(1)}$unit' : '--';
+    return Text(
+      '$label: $reading',
+      style: const TextStyle(fontSize: 10, color: AppColors.darkGreen),
     );
   }
 

@@ -1,0 +1,55 @@
+{
+  "dataset": "synthetic",
+  "samples": 5000,
+  "test_samples": 1000,
+  "positive_rate": 0.3488,
+  "accuracy": 0.95,
+  "precision": 0.9051,
+  "recall": 0.957,
+  "f1": 0.9304,
+  "confusion_matrix": {
+    "labels": [
+      0,
+      1
+    ],
+    "matrix": [
+      [
+        616,
+        35
+      ],
+      [
+        15,
+        334
+      ]
+    ]
+  },
+  "sample_prediction": {
+    "input": {
+      "soil_moisture_pct": 46.96,
+      "air_temperature_c": 25.75,
+      "humidity_pct": 23.26,
+      "soil_temperature_c": 22.22,
+      "rainfall_mm": 1.02,
+      "et0_mm": 4.15,
+      "crop_type": "tuber",
+      "growth_stage": "Initial",
+      "soil_type": "sandy"
+    },
+    "irrigation_needed": false,
+    "probability": 0.193,
+    "confidence": 0.807
+  },
+  "random_state": 42,
+  "features": [
+    "soil_moisture_pct",
+    "air_temperature_c",
+    "humidity_pct",
+    "soil_temperature_c",
+    "rainfall_mm",
+    "et0_mm",
+    "crop_type",
+    "growth_stage",
+    "soil_type"
+  ],
+  "scikit_learn_version": "1.9.1"
+}

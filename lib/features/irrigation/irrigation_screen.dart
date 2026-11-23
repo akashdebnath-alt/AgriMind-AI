@@ -17,6 +17,10 @@ class IrrigationScreen extends StatefulWidget {
 class _IrrigationScreenState extends State<IrrigationScreen> {
   bool _isLoading = true;
   bool _isActionLoading = false;
+  bool _isAiLoading = false;
+  Map<String, dynamic>? _aiAssessment;
+  String? _aiReply;
+  List<dynamic> _aiSources = [];
   List<Farm> _farms = [];
   int? _selectedFarmId;
 
@@ -408,6 +412,53 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
     );
   }
 
+  Future<void> _requestAiIrrigationAdvice() async {
+    final farmId = _selectedFarmId;
+    if (farmId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please register and select a farm first.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isAiLoading = true;
+      _aiAssessment = null;
+      _aiReply = null;
+      _aiSources = [];
+    });
+    try {
+      final response = await ApiService().sendAdviserChat(
+        'Give me personalized irrigation advice for this farm.',
+        farmId: farmId,
+        includeIrrigationAssessment: true,
+      );
+      if (!mounted) return;
+      final assessment = response['irrigation_assessment'];
+      if (assessment is! Map<String, dynamic>) {
+        throw ApiException(
+          'The adviser did not return an irrigation assessment.',
+        );
+      }
+      setState(() {
+        _aiAssessment = assessment;
+        _aiReply = response['reply']?.toString();
+        _aiSources = response['sources'] is List
+            ? response['sources'] as List
+            : [];
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not get AI irrigation advice: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isAiLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -492,7 +543,12 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                         }).toList(),
                         onChanged: (val) {
                           if (val != null && val != _selectedFarmId) {
-                            setState(() => _selectedFarmId = val);
+                            setState(() {
+                              _selectedFarmId = val;
+                              _aiAssessment = null;
+                              _aiReply = null;
+                              _aiSources = [];
+                            });
                             _loadIrrigationData();
                           }
                         },
@@ -519,6 +575,11 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
 
                 // Action buttons
                 _buildActionButtons(),
+
+                if (_aiAssessment != null) ...[
+                  const SizedBox(height: 20),
+                  _buildAiAssessment(),
+                ],
 
                 const SizedBox(height: 28),
 
@@ -768,6 +829,36 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
         SizedBox(
           width: double.infinity,
           height: 52,
+          child: FilledButton.icon(
+            onPressed: _isAiLoading ? null : _requestAiIrrigationAdvice,
+            icon: _isAiLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.psychology_outlined),
+            label: Text(
+              _isAiLoading ? 'Assessing farm...' : 'Get AI Irrigation Advice',
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.darkGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        SizedBox(
+          width: double.infinity,
+          height: 52,
           child: ElevatedButton.icon(
             onPressed: (_irrigatedToday || _isActionLoading)
                 ? null
@@ -816,6 +907,129 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAiAssessment() {
+    final assessment = _aiAssessment ?? const <String, dynamic>{};
+    final sensor =
+        assessment['virtual_sensor'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final readings =
+        sensor['readings'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final prediction =
+        assessment['ml_prediction'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final decision =
+        prediction['label']?.toString() ?? 'Prediction unavailable';
+    final probability = prediction['probability'];
+    final probabilityPercent = probability is num
+        ? '${(probability * 100).round()}%'
+        : '--';
+    final confidence = prediction['confidence'];
+    final confidencePercent = confidence is num
+        ? '${(confidence * 100).round()}%'
+        : '--';
+    final existingPlan =
+        assessment['existing_plan'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final disagreement = assessment['decision_disagreement'] == true;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.sensors_outlined, color: AppColors.green),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Virtual Sensor & AI Assessment',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkGreen,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            sensor['notice']?.toString() ??
+                'Simulated readings; no physical sensor is connected.',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _sensorValue('Soil moisture', readings['soil_moisture_pct'], '%'),
+              _sensorValue('Air temp', readings['air_temperature_c'], ' C'),
+              _sensorValue('Soil temp', readings['soil_temperature_c'], ' C'),
+              _sensorValue('Humidity', readings['humidity_pct'], '%'),
+              _sensorValue('Rainfall', readings['rainfall_mm'], ' mm'),
+              _sensorValue('ET0', readings['et0_mm'], ' mm/day'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'ML prediction: $decision. Irrigation probability: $probabilityPercent; '
+            'model score: $confidencePercent (not real-world accuracy).',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.darkGreen,
+            ),
+          ),
+          if (existingPlan['daily_liters'] is num) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Existing irrigation estimate: '
+              '${(existingPlan['daily_liters'] as num).round()} L today.',
+              style: const TextStyle(fontSize: 12, color: AppColors.darkGreen),
+            ),
+          ],
+          if (disagreement) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'The model and irrigation estimate differ. Check root-zone moisture before deciding.',
+              style: TextStyle(fontSize: 12, color: Colors.deepOrange),
+            ),
+          ],
+          if (_aiReply != null) ...[
+            const SizedBox(height: 12),
+            Text(_aiReply!, style: const TextStyle(fontSize: 13, height: 1.45)),
+          ],
+          if (_aiSources.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Knowledge: ${_aiSources.map((source) => source is Map ? source['title'] : source).join(', ')}',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _sensorValue(String label, dynamic value, String unit) {
+    final display = value is num ? '${value.toStringAsFixed(1)}$unit' : '--';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.lightGreen,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$label: $display',
+        style: const TextStyle(fontSize: 12, color: AppColors.darkGreen),
+      ),
     );
   }
 
