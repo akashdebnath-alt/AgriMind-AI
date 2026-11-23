@@ -27,7 +27,8 @@ Local setup uses SQLite. Docker setup uses MySQL 8. API startup creates missing 
 
 ## Behaviour notes
 - Areas are stored in hectares (report design) and returned in the unit the user chose.
-- Irrigation numbers are estimates: ETc = Kc x ET0, minus effective rainfall, 1 mm on 1 ha = 10,000 L.
+- Irrigation plans use the FAO-56 soil water balance with ETc = Kc x ET0, rain and irrigation; when
+  history/forecast data cannot support the balance, the app falls back to the simple ETc baseline. 1 mm on 1 ha = 10,000 L.
   ET0/rain come from Open-Meteo using the farm location (geocoded on save). If weather is unavailable the
   response says `weather_source: "fallback"`, lists assumptions and lowers `confidence`; `/weather` returns 503.
 - The AI Adviser retrieves relevant curated knowledge and uses Gemini when configured; it returns a
@@ -40,11 +41,11 @@ Local setup uses SQLite. Docker setup uses MySQL 8. API startup creates missing 
   The Random Forest uses those features and was trained on synthetic data; `probability` is the model's
   irrigation-class probability, while `confidence` is the larger of the two class probabilities. Neither is
   real-world accuracy, and the result is advisory only.
-- `irrigation_assessment.existing_plan` includes the current ETc water-demand estimate. Its
+- `irrigation_assessment.existing_plan` includes the current FAO-56 soil water-balance plan. Its
   `irrigation_recommended` value and the top-level `decision_disagreement` are only populated when the plan
   provides a yes/no root-zone water-balance decision. For the ETc baseline, they are `null`: positive daily
   water demand is not by itself a decision to irrigate today.
-- The Adviser sends the simulated readings, model result, farm/crop details, and retrieved knowledge notes
+- The Adviser sends the simulated readings, model result, farm/crop details, and RAG-retrieved knowledge notes
   to Gemini when configured. Without Gemini it returns the same assessment alongside the existing retrieval
   answer. Missing weather uses configured fallbacks and is identified in `virtual_sensor.sources`.
 - Retrain and evaluate the model from the backend directory with

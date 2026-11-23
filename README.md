@@ -22,11 +22,19 @@
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
+## Known limitations
+
+- Irrigation plans and readings are estimates; confirm important decisions in the field.
+- Virtual sensors are simulated demonstrations; no physical sensors are connected.
+- The Random Forest uses synthetic data and is not real-world accuracy.
+- Growth stage is entered by the user and may be approximate.
+- SQLite is intended for local development; production deployments need a managed database and HTTPS.
+
 ## 🌱 About
 
 **AgriMind AI** is a cross-platform agricultural water-management app built with **Flutter** and **FastAPI**. It brings together farm and crop management, live weather, scientific irrigation calculations, dashboard insights and a source-grounded agricultural adviser, so farmers can decide *when* and *how much* to irrigate using data instead of guesswork.
 
-> 💧 **The science behind it:** crop water need is estimated with the FAO-56 concept **`ETc = Kc × ET0`**, then adjusted for effective rainfall. `1 mm` over `1 ha` equals `10,000 L`.
+> 💧 **The science behind it:** the irrigation planner uses a FAO-56 soil water balance, tracking root-zone depletion with **`ETc = Kc × ET0`**, rain and irrigation. When live history is unavailable, it falls back to the simple offline **`ETc = Kc × ET0`** daily baseline. `1 mm` over `1 ha` equals `10,000 L`.
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
@@ -38,9 +46,9 @@
 | 🚜 | **Farms** | Full CRUD, acres/hectares conversion, soil type, automatic geocoding, per-user data isolation |
 | 🌾 | **Crops** | Crop CRUD with variety, planting date, growth stage and season; days-since-planting tracking |
 | ⛅ | **Live weather** | Open-Meteo 5-day forecast, humidity, wind, rainfall and ET0 for each farm location |
-| 💧 | **Irrigation planner** | Daily and weekly water estimates, confidence level, schedules, logs and saved recommendations |
+| 💧 | **Irrigation planner** | FAO-56 root-zone water balance, daily and weekly estimates, schedules, logs and saved recommendations |
 | 📊 | **Insights** | Water-use ratio, crop distribution, weekly activity chart and smart tips |
-| 🤖 | **AI Adviser** | Retrieval-based agricultural chat with cited sources; says so when it has no verified answer |
+| 🤖 | **AI Adviser** | RAG with Gemini embeddings and keyword fallback, plus Gemini answers with an automatic backup model |
 | 🗄️ | **Flexible storage** | SQLite for quick local development, MySQL 8 for Docker and production |
 
 <img src="assets/divider.svg" width="100%" alt=""/>
@@ -185,17 +193,31 @@ flutter analyze
 
 ## ⚙️ Configuration
 
-Settings live in `backend/.env`:
+Settings live in `backend/.env`. Keep only setting names here; never commit real values:
 
 | Setting | Purpose | Default |
 |---|---|---|
-| `DATABASE_URL` | SQLAlchemy connection string | SQLite dev database |
-| `SECRET_KEY` | JWT signing key | Development-only fallback |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Login session length | `10080` (7 days) |
-| `CORS_ORIGINS` | Allowed browser origins | `*` |
-| `TIMEZONE` | Application timezone | `Asia/Kolkata` |
+| `SECRET_KEY` | JWT signing key |
+| `DATABASE_URL` | SQLAlchemy connection string |
+| `GEMINI_API_KEY` | Gemini API access |
+| `GEMINI_MODEL` | Primary Gemini model |
+| `GEMINI_FALLBACK_MODEL` | Automatic backup Gemini model |
+| `APP_ENV` | Development or production mode |
+| `CORS_ORIGINS` | Allowed browser origins |
+| `TIMEZONE` | Application timezone |
 
-> ⚠️ **Before deploying:** set a strong, unique `SECRET_KEY` and restrict `CORS_ORIGINS`.
+> ⚠️ **Before deploying:** set a strong, unique `SECRET_KEY`, restrict `CORS_ORIGINS`, and use HTTPS. The app's Change Server URL option is unchanged.
+
+### RAG, ML and test commands
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m app.services.rag
+.\.venv\Scripts\python.exe -m app.services.train_irrigation_model
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+The RAG index requires a configured Gemini embedding key. The retraining command is demonstration-only and rewrites the synthetic dataset, model and metrics.
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 

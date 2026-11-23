@@ -9,9 +9,9 @@ FastAPI and SQLAlchemy REST API for the Flutter client. SQLite is used for local
 - Area conversion between acres and hectares
 - Open-Meteo weather and geocoding
 - Irrigation planning and logs
-- ETc calculations (`ETc = Kc x ET0`)
+- FAO-56 soil water balance with `ETc = Kc x ET0`; simple ETc baseline as an offline fallback
 - Dashboard and insight aggregates
-- Grounded retrieval-based AI adviser
+- RAG AI adviser using Gemini embeddings plus keyword fallback and Gemini with an automatic backup model
 - Deterministic virtual soil/weather readings and a crop-aware, synthetic-data Random Forest irrigation assessment, integrated with the AI Adviser
 
 ## Quick start on Windows
@@ -41,14 +41,17 @@ Copy-Item .env.example .env
 py -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-For SQLite, `.env` should contain:
+Configure `.env` using these setting names (set values privately; never commit real secrets):
 
 ```dotenv
-DATABASE_URL=sqlite:///./agrimind_dev.db
-SECRET_KEY=replace-with-a-long-random-local-string
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-CORS_ORIGINS=*
-TIMEZONE=Asia/Kolkata
+SECRET_KEY
+DATABASE_URL
+GEMINI_API_KEY
+GEMINI_MODEL
+GEMINI_FALLBACK_MODEL
+APP_ENV
+CORS_ORIGINS
+TIMEZONE
 ```
 
 ## Run with MySQL and Docker
@@ -84,6 +87,21 @@ The tests use an isolated in-memory SQLite database and mocked weather responses
 
 Set a strong random `SECRET_KEY` before deploying. See [docs/API.md](docs/API.md) for the complete endpoint contract.
 
-The irrigation assessment uses a synthetic training dataset and simulated sensor values for demonstration.
-It is not a substitute for field measurements or local agronomic advice. To regenerate the dataset, train
-the model, and write hold-out metrics, run `py -m app.services.train_irrigation_model` from `backend`.
+## Build the RAG index and retrain the demonstration model
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m app.services.rag
+.\.venv\Scripts\python.exe -m app.services.train_irrigation_model
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Virtual sensors and the synthetic-data Random Forest are demonstrations, not real-world accuracy, and no physical sensors are connected.
+
+## Known limitations
+
+- Estimates only; confirm important decisions with field conditions and local advice.
+- Virtual sensors are simulated.
+- The ML model is trained on synthetic data.
+- Growth stage is entered by the user.
+- SQLite is for development.
