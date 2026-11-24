@@ -26,8 +26,8 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
 
   bool _irrigatedToday = false;
   String _statusText = 'Needs Monitoring';
-  String _dailyEstimate = '450 L';
-  String _weeklyEstimate = '3,150 L';
+  String _dailyEstimate = '--';
+  String _weeklyEstimate = '--';
   String _dailyCropDemand = '--';
   String _weeklyCropDemand = '--';
   String _nextIrrigationTitle = 'Tomorrow morning';
@@ -36,21 +36,7 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
       'Estimates use crop stage, area, weather and rainfall (ETc = Kc x ET0).';
 
   List<Map<String, dynamic>> _history = [
-    {
-      'date_label': 'Yesterday',
-      'amount_liters': 450.0,
-      'method': 'Drip irrigation',
-    },
-    {
-      'date_label': '18 Nov 2026',
-      'amount_liters': 600.0,
-      'method': 'Drip irrigation',
-    },
-    {
-      'date_label': '16 Nov 2026',
-      'amount_liters': 500.0,
-      'method': 'Manual irrigation',
-    },
+    {},
   ];
 
   @override
@@ -165,7 +151,8 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
 
           _history.insert(0, {
             'date_label': 'Today',
-            'amount_liters': result['amount_liters'] ?? 450.0,
+            if (result['amount_liters'] is num)
+              'amount_liters': result['amount_liters'],
             'method': result['method'] ?? 'Drip irrigation',
           });
         });
@@ -177,19 +164,11 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
           ),
         );
       } catch (e) {
-        // Fallback demo behavior
-        setState(() {
-          _irrigatedToday = true;
-          _statusText = 'Completed Today ✓';
-          _history.insert(0, {
-            'date_label': 'Today',
-            'amount_liters': 450.0,
-            'method': 'Drip irrigation',
-          });
-        });
-
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Marked as completed (Offline: $e)')),
+          const SnackBar(
+            content: Text('Could not save irrigation. Please try again.'),
+          ),
         );
       } finally {
         if (mounted) {
@@ -199,19 +178,12 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
     } else {
       // No farm registered yet
       setState(() {
-        _irrigatedToday = true;
-        _statusText = 'Completed Today ✓';
-        _history.insert(0, {
-          'date_label': 'Today',
-          'amount_liters': 450.0,
-          'method': 'Drip irrigation',
-        });
         _isActionLoading = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Irrigation marked as completed (Demo mode)!'),
+          content: Text('Please register and select a farm first.'),
         ),
       );
     }
@@ -382,7 +354,15 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                   );
 
                   final amount =
-                      double.tryParse(amountController.text.trim()) ?? 450.0;
+                      double.tryParse(amountController.text.trim());
+                  if (amount == null || amount <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please enter a valid irrigation amount.'),
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.pop(dialogCtx);
 
                   try {
@@ -404,7 +384,9 @@ class _IrrigationScreenState extends State<IrrigationScreen> {
                   } catch (e) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Scheduled locally: $e')),
+                        const SnackBar(
+                          content: Text('Could not save irrigation. Please try again.'),
+                        ),
                       );
                     }
                   }

@@ -142,6 +142,37 @@ def test_overview_keeps_existing_fields_and_adds_crop_demand(client):
     assert isinstance(data["weekly_crop_demand_liters"], int)
 
 
+def test_mark_irrigated_without_amount_rejects_zero_plan(client, monkeypatch):
+    from app.routers import irrigation
+
+    h = auth_headers(client)
+    farm = make_farm(client, h)
+    monkeypatch.setattr(
+        irrigation,
+        "_plan",
+        lambda db, selected_farm: {
+            "daily_liters": 0,
+            "crop_demand_liters": 2500,
+        },
+    )
+
+    before = client.get(f"{B}/irrigation/logs", headers=h, params={"farm_id": farm["id"]})
+    assert before.status_code == 200
+    assert before.json() == []
+
+    response = client.post(
+        f"{B}/irrigation/logs",
+        headers=h,
+        json={"farm_id": farm["id"]},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No irrigation is needed today. Enter an amount to log anyway."
+
+    after = client.get(f"{B}/irrigation/logs", headers=h, params={"farm_id": farm["id"]})
+    assert after.status_code == 200
+    assert after.json() == []
+
+
 def test_weather_and_adviser(client):
     h = auth_headers(client)
     assert client.get(f"{B}/weather", headers=h).status_code == 404

@@ -14,36 +14,23 @@ class _InsightsScreenState extends State<InsightsScreen> {
   bool _isLoading = true;
 
   // Overview
-  String _totalFarms = '2';
-  String _cultivatedArea = '5.5 ac';
-  String _activeCrops = '4';
-  String _waterUsed = '4,500 L';
+  String _totalFarms = '--';
+  String _cultivatedArea = '--';
+  String _activeCrops = '--';
+  String _waterUsed = '--';
 
   // Water usage
-  String _waterUsageTitle = '4,500 L';
-  double _usedRatio = 0.65;
-  String _usedPctLabel = '65%';
-  double _remainingRatio = 0.35;
-  String _remainingPctLabel = '35%';
+  String _waterUsageTitle = '--';
+  double? _usedRatio;
+  String _usedPctLabel = '--';
+  double? _remainingRatio;
+  String _remainingPctLabel = '--';
 
   // Crop distribution
-  List<Map<String, dynamic>> _cropDistribution = [
-    {'name': 'Rice', 'area': '2.5 acres', 'progress': 0.80},
-    {'name': 'Tomato', 'area': '1.5 acres', 'progress': 0.55},
-    {'name': 'Mustard', 'area': '1.0 acres', 'progress': 0.35},
-    {'name': 'Potato', 'area': '0.5 acres', 'progress': 0.70},
-  ];
+  List<Map<String, dynamic>> _cropDistribution = [];
 
   // Last 7 days activity
-  List<Map<String, dynamic>> _weeklyDays = [
-    {'day': 'Mon', 'value': 0.60},
-    {'day': 'Tue', 'value': 0.90},
-    {'day': 'Wed', 'value': 0.40},
-    {'day': 'Thu', 'value': 0.75},
-    {'day': 'Fri', 'value': 0.50},
-    {'day': 'Sat', 'value': 1.00},
-    {'day': 'Sun', 'value': 0.30},
-  ];
+  List<Map<String, dynamic>> _weeklyDays = [];
 
   // Recommendations
   List<Map<String, dynamic>> _recommendations = [
@@ -72,7 +59,18 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   Future<void> _loadInsights() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _totalFarms = '--';
+      _cultivatedArea = '--';
+      _activeCrops = '--';
+      _waterUsed = '--';
+      _waterUsageTitle = '--';
+      _usedRatio = null;
+      _usedPctLabel = '--';
+      _remainingRatio = null;
+      _remainingPctLabel = '--';
+    });
 
     try {
       final data = await ApiService().getInsights();
@@ -95,14 +93,20 @@ class _InsightsScreenState extends State<InsightsScreen> {
             _waterUsageTitle = '$usedLiters L';
             if (wu['used_ratio'] != null) {
               _usedRatio = (wu['used_ratio'] as num).toDouble().clamp(0.0, 1.0);
-              _usedPctLabel = '${(_usedRatio * 100).round()}%';
+              _usedPctLabel = '${((_usedRatio ?? 0.0) * 100).round()}%';
+            } else {
+              _usedRatio = null;
+              _usedPctLabel = '--';
             }
             if (wu['remaining_ratio'] != null) {
               _remainingRatio = (wu['remaining_ratio'] as num).toDouble().clamp(
                 0.0,
                 1.0,
               );
-              _remainingPctLabel = '${(_remainingRatio * 100).round()}%';
+              _remainingPctLabel = '${((_remainingRatio ?? 0.0) * 100).round()}%';
+            } else {
+              _remainingRatio = null;
+              _remainingPctLabel = '--';
             }
           }
 
@@ -125,8 +129,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
               (data['weekly_activity'] as List).isNotEmpty) {
             _weeklyDays = (data['weekly_activity'] as List).map((d) {
               final m = d as Map<String, dynamic>;
-              final val = (m['value'] as num?)?.toDouble() ?? 0.1;
-              return {'day': m['day'] ?? 'Day', 'value': val.clamp(0.05, 1.0)};
+              final val = (m['value'] as num?)?.toDouble() ?? 0.0;
+              return {'day': m['day'] ?? 'Day', 'value': val.clamp(0.0, 1.0)};
             }).toList();
           }
 
@@ -152,7 +156,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
         });
       }
     } catch (_) {
-      // Keep sample data if offline
+      if (mounted) {
+        setState(() {
+          _totalFarms = '--';
+          _cultivatedArea = '--';
+          _activeCrops = '--';
+          _waterUsed = '--';
+          _waterUsageTitle = '--';
+          _usedRatio = null;
+          _usedPctLabel = '--';
+          _remainingRatio = null;
+          _remainingPctLabel = '--';
+          _cropDistribution = [];
+          _weeklyDays = [];
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -414,7 +432,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _progressRow(String title, double value, String label) {
+  Widget _progressRow(String title, double? value, String label) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -438,15 +456,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: LinearProgressIndicator(
-            value: value,
-            minHeight: 9,
-            backgroundColor: AppColors.lightGreen,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+        if (value == null)
+          const Text(
+            '--',
+            style: TextStyle(color: Colors.grey),
+          )
+        else
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 9,
+              backgroundColor: AppColors.lightGreen,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -577,7 +601,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   children: [
                     Container(
                       width: 24,
-                      height: (110 * value).clamp(6.0, 110.0),
+                      height: 110 * value,
                       decoration: BoxDecoration(
                         color: AppColors.green,
                         borderRadius: BorderRadius.circular(8),

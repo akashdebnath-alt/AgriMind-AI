@@ -118,9 +118,12 @@ def mark_irrigated(body: IrrigationLogIn, db: Session = Depends(get_db), user: U
     amount = body.amount_liters
     if amount is None:
         plan = _plan(db, farm)
-        amount = plan["daily_liters"] or plan.get("crop_demand_liters") or None
-    if amount is None:
-        raise HTTPException(400, "amount_liters is required (no estimate available for this farm)")
+        amount = plan["daily_liters"]
+        if amount is None or amount <= 0:
+            raise HTTPException(
+                400,
+                "No irrigation is needed today. Enter an amount to log anyway.",
+            )
     log = IrrigationLog(farm_id=farm.id, amount_liters=amount, method=body.method,
                         status="completed", occurred_at=now_local())
     db.add(log)

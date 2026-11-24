@@ -29,13 +29,18 @@ class CropsScreen extends StatefulWidget {
 }
 
 class _CropsScreenState extends State<CropsScreen> {
+  bool _isMutating = false;
+
   List<Crop> get _crops => widget.crops;
+
+  bool get _canMutate => !_isMutating;
 
   void _updateCrops(List<Crop> updatedCrops) {
     widget.onCropsChanged(updatedCrops);
   }
 
   Future<void> _addCrop() async {
+    if (!_canMutate) return;
     if (widget.farmNames.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -53,21 +58,37 @@ class _CropsScreenState extends State<CropsScreen> {
     );
 
     if (crop != null && mounted) {
-      if (widget.onAddCropRequest != null) {
-        final saved = await widget.onAddCropRequest!(crop);
-        if (saved != null) {
-          _updateCrops([..._crops, saved]);
+      setState(() => _isMutating = true);
+      try {
+        if (widget.onAddCropRequest != null) {
+          final saved = await widget.onAddCropRequest!(crop);
+          if (saved != null) {
+            _updateCrops([..._crops, saved]);
+            if (widget.onRefresh != null) await widget.onRefresh!();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Crop added successfully!')),
+            );
+          }
+        } else {
+          _updateCrops([..._crops, crop]);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Crop added successfully!')),
+          );
         }
-      } else {
-        _updateCrops([..._crops, crop]);
+      } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Crop added successfully!')),
+          SnackBar(content: Text('Could not add crop: $e')),
         );
+      } finally {
+        if (mounted) setState(() => _isMutating = false);
       }
     }
   }
 
   Future<void> _editCrop(int index) async {
+    if (!_canMutate) return;
     final updated = await Navigator.push<Crop>(
       context,
       MaterialPageRoute(
@@ -79,25 +100,41 @@ class _CropsScreenState extends State<CropsScreen> {
     );
 
     if (updated != null && mounted) {
-      if (widget.onEditCropRequest != null) {
-        final saved = await widget.onEditCropRequest!(updated);
-        if (saved != null) {
+      setState(() => _isMutating = true);
+      try {
+        if (widget.onEditCropRequest != null) {
+          final saved = await widget.onEditCropRequest!(updated);
+          if (saved != null) {
+            final updatedCrops = List<Crop>.from(_crops);
+            updatedCrops[index] = saved;
+            _updateCrops(updatedCrops);
+            if (widget.onRefresh != null) await widget.onRefresh!();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Crop updated successfully!')),
+            );
+          }
+        } else {
           final updatedCrops = List<Crop>.from(_crops);
-          updatedCrops[index] = saved;
+          updatedCrops[index] = updated;
           _updateCrops(updatedCrops);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Crop updated successfully!')),
+          );
         }
-      } else {
-        final updatedCrops = List<Crop>.from(_crops);
-        updatedCrops[index] = updated;
-        _updateCrops(updatedCrops);
+      } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Crop updated successfully!')),
+          SnackBar(content: Text('Could not update crop: $e')),
         );
+      } finally {
+        if (mounted) setState(() => _isMutating = false);
       }
     }
   }
 
   Future<void> _deleteCrop(int index) async {
+    if (!_canMutate) return;
     final crop = _crops[index];
 
     final confirmed = await showDialog<bool>(
@@ -119,20 +156,35 @@ class _CropsScreenState extends State<CropsScreen> {
     );
 
     if (confirmed == true && mounted) {
-      if (widget.onDeleteCropRequest != null) {
-        final deleted = await widget.onDeleteCropRequest!(crop);
-        if (deleted) {
+      setState(() => _isMutating = true);
+      try {
+        if (widget.onDeleteCropRequest != null) {
+          final deleted = await widget.onDeleteCropRequest!(crop);
+          if (deleted) {
+            final updatedCrops = List<Crop>.from(_crops);
+            updatedCrops.removeAt(index);
+            _updateCrops(updatedCrops);
+            if (widget.onRefresh != null) await widget.onRefresh!();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Crop deleted successfully.')),
+            );
+          }
+        } else {
           final updatedCrops = List<Crop>.from(_crops);
           updatedCrops.removeAt(index);
           _updateCrops(updatedCrops);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Crop deleted successfully.')),
+          );
         }
-      } else {
-        final updatedCrops = List<Crop>.from(_crops);
-        updatedCrops.removeAt(index);
-        _updateCrops(updatedCrops);
+      } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Crop deleted successfully.')),
+          SnackBar(content: Text('Could not delete crop: $e')),
         );
+      } finally {
+        if (mounted) setState(() => _isMutating = false);
       }
     }
   }
@@ -236,6 +288,11 @@ class _CropsScreenState extends State<CropsScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            if (_isMutating)
+              const LinearProgressIndicator(
+                minHeight: 2,
+                color: AppColors.green,
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
               child: Row(
@@ -259,7 +316,7 @@ class _CropsScreenState extends State<CropsScreen> {
                     ),
                   ),
                   IconButton(
-                    onPressed: _addCrop,
+                    onPressed: _isMutating ? null : _addCrop,
                     icon: const Icon(Icons.add_circle),
                     color: AppColors.green,
                     iconSize: 34,
@@ -310,7 +367,7 @@ class _CropsScreenState extends State<CropsScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addCrop,
+        onPressed: _isMutating ? null : _addCrop,
         backgroundColor: AppColors.green,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),

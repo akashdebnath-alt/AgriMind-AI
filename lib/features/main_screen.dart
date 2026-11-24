@@ -296,13 +296,11 @@ class _MainScreenState extends State<MainScreen> {
           onAddCropRequest: (newCrop) async {
             if (widget.isDemoMode) return newCrop;
             final saved = await ApiService().createCrop(newCrop);
-            await _loadAllData();
             return saved;
           },
           onEditCropRequest: (updatedCrop) async {
             if (widget.isDemoMode) return updatedCrop;
             final saved = await ApiService().updateCrop(updatedCrop);
-            await _loadAllData();
             return saved;
           },
           onDeleteCropRequest: (crop) async {
@@ -311,7 +309,6 @@ class _MainScreenState extends State<MainScreen> {
               throw ApiException('This crop cannot be deleted without an ID.');
             }
             await ApiService().deleteCrop(crop.id!);
-            await _loadAllData();
             return true;
           },
           onCropsChanged: (updatedCrops) {
