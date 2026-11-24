@@ -404,9 +404,16 @@ class ApiService {
   // ---------------------------------------------------------------------------
   // WEATHER
   // ---------------------------------------------------------------------------
-  Future<Map<String, dynamic>?> getWeather({int? farmId}) async {
+  Future<Map<String, dynamic>?> getWeather({
+    int? farmId,
+    double? lat,
+    double? lon,
+  }) async {
     var url = '$baseUrl${ApiConstants.weather}';
-    if (farmId != null) {
+    if (lat != null && lon != null) {
+      // Current-location mode: coordinates take priority over a farm.
+      url += '?lat=$lat&lon=$lon';
+    } else if (farmId != null) {
       url += '?farm_id=$farmId';
     }
     final uri = Uri.parse(url);

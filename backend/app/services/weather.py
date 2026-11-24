@@ -42,6 +42,31 @@ def geocode(name: str) -> tuple[float, float] | None:
     return None
 
 
+def reverse_geocode(lat: float, lon: float) -> str | None:
+    """Best-effort place name for coordinates (BigDataCloud free client endpoint, no key)."""
+    key = ("rev", round(lat, 2), round(lon, 2))
+    hit = _CACHE.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]  # type: ignore[return-value]
+    name = None
+    try:
+        r = httpx.get(
+            "https://api.bigdatacloud.net/data/reverse-geocode-client",
+            params={"latitude": lat, "longitude": lon, "localityLanguage": "en"},
+            timeout=settings.weather_timeout_seconds,
+        )
+        r.raise_for_status()
+        j = r.json()
+        place = j.get("city") or j.get("locality")
+        region = j.get("principalSubdivision")
+        parts = [p for p in (place, region) if p]
+        name = ", ".join(parts) if parts else (j.get("countryName") or None)
+    except Exception:
+        name = None
+    _CACHE[key] = (time.time() + (86400 if name else _FAIL_TTL), name)  # type: ignore[assignment]
+    return name
+
+
 def get_forecast(lat: float, lon: float) -> dict | None:
     key = (round(lat, 2), round(lon, 2))
     hit = _CACHE.get(key)

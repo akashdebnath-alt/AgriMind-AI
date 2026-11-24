@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/location_service.dart';
 import '../farms/farm_model.dart';
 
 class WeatherScreen extends StatefulWidget {
@@ -19,6 +20,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
   Map<String, dynamic>? _weatherData;
   List<Farm> _farms = [];
   int? _selectedFarmId;
+  bool _useCurrentLocation = true;
+  String? _locationError;
 
   @override
   void initState() {
@@ -46,10 +49,27 @@ class _WeatherScreenState extends State<WeatherScreen> {
         _selectedFarmId = _farms.first.id;
       }
 
-      final data = await ApiService().getWeather(farmId: _selectedFarmId);
+      Map<String, dynamic>? data;
+      String? locationError;
+      if (_useCurrentLocation) {
+        final loc = await LocationService.getCurrentLocation(
+          forceRefresh: forceRefresh,
+        );
+        if (loc.ok) {
+          data = await ApiService().getWeather(
+            lat: loc.latitude,
+            lon: loc.longitude,
+          );
+        } else {
+          locationError = loc.error;
+        }
+      }
+      // Fall back to the selected farm if location is off, denied or failed.
+      data ??= await ApiService().getWeather(farmId: _selectedFarmId);
       if (mounted) {
         setState(() {
           _weatherData = data;
+          _locationError = locationError;
           _isLoading = false;
         });
       }
@@ -140,6 +160,10 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
                 const SizedBox(height: 20),
 
+                // Current-location toggle (shows a hint if permission is missing)
+                _locationBar(),
+                const SizedBox(height: 16),
+
                 // Farm selector dropdown if multiple farms exist
                 if (_farms.length > 1) ...[
                   Container(
@@ -173,7 +197,10 @@ class _WeatherScreenState extends State<WeatherScreen> {
                         }).toList(),
                         onChanged: (val) {
                           if (val != null && val != _selectedFarmId) {
-                            setState(() => _selectedFarmId = val);
+                            setState(() {
+                              _selectedFarmId = val;
+                              _useCurrentLocation = false;
+                            });
                             _loadWeather();
                           }
                         },
@@ -251,7 +278,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                         const SizedBox(height: 10),
                         Text(
                           _weatherData != null
-                              ? 'Live forecast powered by Open-Meteo for ${_weatherData!['farm_name'] ?? 'your farm'}. '
+                              ? 'Live forecast powered by Open-Meteo for ${_weatherData!['farm_name'] ?? 'your current location'}. '
                                     'Rainfall and reference evapotranspiration (ET0) are directly integrated into irrigation planning.'
                               : 'Weather information helps plan field activities, monitor rainfall, and calculate smart irrigation needs.',
                           style: const TextStyle(height: 1.4),
@@ -279,6 +306,76 @@ class _WeatherScreenState extends State<WeatherScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _locationBar() {
+    final hasError = _useCurrentLocation && _locationError != null;
+    final accent = hasError ? Colors.orange.shade800 : AppColors.green;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: hasError ? Colors.orange.shade50 : AppColors.lightGreen,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasError
+                    ? Icons.location_off_rounded
+                    : Icons.my_location_rounded,
+                color: accent,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  !_useCurrentLocation
+                      ? 'Showing weather for your farm'
+                      : hasError
+                      ? 'Current location unavailable'
+                      : 'Using your current location',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: accent,
+                  ),
+                ),
+              ),
+              Switch(
+                value: _useCurrentLocation,
+                onChanged: (val) {
+                  setState(() => _useCurrentLocation = val);
+                  _loadWeather(forceRefresh: val);
+                },
+              ),
+            ],
+          ),
+          if (hasError) ...[
+            Text(
+              _locationError!,
+              style: TextStyle(fontSize: 12, color: Colors.orange.shade900),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: LocationService.openSettings,
+                  child: const Text('Open settings'),
+                ),
+                TextButton(
+                  onPressed: () => _loadWeather(forceRefresh: true),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -337,9 +434,11 @@ class _WeatherScreenState extends State<WeatherScreen> {
     final location =
         _weatherData?['location'] ??
         (_farms.isNotEmpty ? _farms.first.location : 'Your Farm Location');
-    final farmName =
-        _weatherData?['farm_name'] ??
-        (_farms.isNotEmpty ? _farms.first.name : null);
+    final isCurrentLocation = _weatherData?['is_current_location'] == true;
+    final farmName = isCurrentLocation
+        ? null
+        : (_weatherData?['farm_name'] ??
+              (_farms.isNotEmpty ? _farms.first.name : null));
 
     final temp = cur != null ? '${cur['temperature_c']?.round()}°C' : '28°C';
     final condition = cur != null

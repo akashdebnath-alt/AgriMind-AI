@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/app_colors.dart';
 import '../core/services/api_service.dart';
+import '../core/services/location_service.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'farms/farm_model.dart';
 import 'farms/farms_screen.dart';
@@ -87,7 +88,15 @@ class _MainScreenState extends State<MainScreen> {
       errors.add('Dashboard: $e');
     }
     try {
-      weather = await ApiService().getWeather();
+      // Prefer the device's current location; fall back to the farm's location.
+      final loc = await LocationService.getCurrentLocation();
+      if (loc.ok) {
+        weather = await ApiService().getWeather(
+          lat: loc.latitude,
+          lon: loc.longitude,
+        );
+      }
+      weather ??= await ApiService().getWeather();
     } catch (e) {
       errors.add('Weather: $e');
     }
